@@ -1,0 +1,152 @@
+{
+  "kind": "coverage_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-25T21:32:19.299Z",
+  "sources": {
+    "buildRequest": true,
+    "implementationPlan": true
+  },
+  "requirements": {
+    "total": 7,
+    "implemented": 6,
+    "items": [
+      {
+        "id": "REQ-37",
+        "summary": "Audit and fix the root App.tsx router configuration to ensure all user-facing routes (/, /login, /register, /dashboard, /lotteries, /lotteries/:id/buy, /my-tickets, /add-balance, /withdraw, /transactions, /results/:lotteryId) and all admin routes (/admin, /admin/dashboard, /admin/balance-requests, /admin/withdrawals, /admin/lotteries, /admin/users, /admin/promotions, /admin/draw) are correctly registered with TanStack Router and render their respective page components without blank screens or routing errors. Verify that route definitions reference the correct imported page components and that no route is missing a component assignment.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/App.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/App.tsx"
+        ]
+      },
+      {
+        "id": "REQ-38",
+        "summary": "Audit and fix the AuthContext so that after Internet Identity login the user profile is correctly fetched from the backend actor and stored in context state, transitioning the UI from unauthenticated to authenticated view. Ensure that unauthenticated users accessing protected routes are redirected to /login, and that admin users can access /admin/* routes. Confirm that the InternetIdentityProvider and AuthContext provider are correctly nested in main.tsx and App.tsx so that context values are available throughout the component tree.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/contexts/AuthContext.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/contexts/AuthContext.tsx"
+        ]
+      },
+      {
+        "id": "REQ-39",
+        "summary": "Audit and fix the Navbar component to correctly render on every page. The Navbar must be mounted at the application root level (App.tsx layout). For authenticated users it must show the app logo, coin balance, user display name, and a logout button. For admin users it must additionally show an 'Admin Panel' navigation link. For unauthenticated users it must show only the logo and a Login button. Fix any issue causing the Navbar to be absent or invisible (e.g. incorrect z-index, missing layout wrapper, context not available at mount time).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/Navbar.tsx",
+          "frontend/src/App.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/Navbar.tsx",
+          "frontend/src/App.tsx"
+        ]
+      },
+      {
+        "id": "REQ-40",
+        "summary": "Audit and fix the Admin panel layout so that all admin sub-pages (Dashboard, Balance Requests, Withdrawal Management, Lottery Management, User Management, Promotions, Draw Declaration) are accessible via sidebar navigation links and render their content correctly. Ensure a shared admin layout wrapper component is applied to all /admin/* routes and that sidebar links correctly navigate between admin pages without blank screens.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/App.tsx",
+          "frontend/src/pages/admin/AdminDashboard.tsx",
+          "frontend/src/pages/admin/BalanceRequests.tsx",
+          "frontend/src/pages/admin/WithdrawalManagement.tsx",
+          "frontend/src/pages/admin/LotteryManagement.tsx",
+          "frontend/src/pages/admin/UserManagement.tsx",
+          "frontend/src/pages/admin/Promotions.tsx",
+          "frontend/src/pages/admin/DrawDeclaration.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/App.tsx",
+          "frontend/src/pages/admin/AdminDashboard.tsx",
+          "frontend/src/pages/admin/BalanceRequests.tsx",
+          "frontend/src/pages/admin/WithdrawalManagement.tsx",
+          "frontend/src/pages/admin/LotteryManagement.tsx",
+          "frontend/src/pages/admin/UserManagement.tsx",
+          "frontend/src/pages/admin/Promotions.tsx",
+          "frontend/src/pages/admin/DrawDeclaration.tsx"
+        ]
+      },
+      {
+        "id": "REQ-41",
+        "summary": "Audit and fix the useActor hook and all React Query hooks in useQueries.ts to ensure the backend actor is correctly initialised after Internet Identity login and is passed to all query and mutation functions. Fix any case where actor is null or undefined at the time of a query execution, which causes API calls to silently fail and pages to render empty. Add null-guards so that queries dependent on the actor are disabled (enabled: false) until the actor is available, and display a loading state rather than a blank page while the actor initialises.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/Landing.tsx",
+          "frontend/src/pages/Login.tsx",
+          "frontend/src/pages/UserDashboard.tsx",
+          "frontend/src/pages/LotteryList.tsx",
+          "frontend/src/pages/MyTickets.tsx",
+          "frontend/src/pages/TransactionHistory.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/Landing.tsx",
+          "frontend/src/pages/Login.tsx",
+          "frontend/src/pages/UserDashboard.tsx"
+        ]
+      },
+      {
+        "id": "REQ-42",
+        "summary": "Audit and fix React Query (TanStack Query) configuration in the application. Ensure QueryClientProvider is correctly mounted at the app root in main.tsx wrapping the entire application. Add error boundaries or per-query error fallback UI so that a failed backend call displays a visible error message instead of a blank page. Ensure no query throws an unhandled error that crashes the React tree and produces a white screen.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/App.tsx",
+          "frontend/src/hooks/useQueries.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/App.tsx",
+          "frontend/src/hooks/useQueries.ts"
+        ]
+      },
+      {
+        "id": "REQ-43",
+        "summary": "Audit and fix the global CSS and Tailwind configuration to ensure all page content is visible. Verify that index.css and tailwind.config.js correctly define the dark gold theme CSS custom properties and that the body background and text colors are applied so that page content is not hidden (e.g. white text on white background or black text on black background). Ensure the root div in index.html has the correct class or style so the app fills the viewport and is visible.",
+        "status": "missing",
+        "plannedFiles": [
+          "frontend/src/index.css",
+          "frontend/index.html"
+        ],
+        "matchedFiles": []
+      }
+    ]
+  },
+  "changedFiles": [
+    "build-request.json",
+    "build-template/README.md",
+    "caffeine.lock.json",
+    "feature_evidence.json",
+    "frontend-file-summaries.txt",
+    "frontend-implementation-plan.json",
+    "frontend/src/App.tsx",
+    "frontend/src/components/AdminActionLogsTable.tsx",
+    "frontend/src/components/EditPromotionDialog.tsx",
+    "frontend/src/components/LotteryCard.tsx",
+    "frontend/src/components/Navbar.tsx",
+    "frontend/src/components/ProfileSetupModal.tsx",
+    "frontend/src/contexts/AuthContext.tsx",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/BuyTicket.tsx",
+    "frontend/src/pages/DrawResults.tsx",
+    "frontend/src/pages/Landing.tsx",
+    "frontend/src/pages/Login.tsx",
+    "frontend/src/pages/Register.tsx",
+    "frontend/src/pages/UserDashboard.tsx",
+    "frontend/src/pages/WithdrawalRequest.tsx",
+    "frontend/src/pages/admin/AdminDashboard.tsx",
+    "frontend/src/pages/admin/BalanceRequests.tsx",
+    "frontend/src/pages/admin/DrawDeclaration.tsx",
+    "frontend/src/pages/admin/LotteryManagement.tsx",
+    "frontend/src/pages/admin/Promotions.tsx",
+    "frontend/src/pages/admin/UserManagement.tsx",
+    "frontend/src/pages/admin/WithdrawalManagement.tsx",
+    "project_state.json",
+    "scratch/component-selection.json",
+    "spec.md",
+    "spec_vs_diff_report.json"
+  ]
+}

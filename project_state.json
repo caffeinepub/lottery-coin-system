@@ -1,0 +1,463 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 11,
+  "summary": "Full-stack lottery coin system with React.js frontend, Node.js + Express backend, and MySQL database. Features include email OTP authentication, coin-based wallet, balance addition with admin approval, lottery ticket purchasing (6-digit hourly, 9-digit daily, 12-digit weekly jackpot draws with massive prize pools, plus 1h/3h/5h/12h timed draws), dynamic prize pools (fixed ticket price, fixed max tickets, max 50 tickets per user, draw on time even if not full, admin can create pools), live tracking of tickets sold/remaining/total pool, 90% revenue distribution to winners (minimum 70% win, tiered prizes for 1st/2nd/3rd), full result transparency, automated draw results with winner crediting, withdrawal system with admin approval, bonus/promotional system (admin bonus coins, first-user 90% discount, referral bonuses, limited-time discounts, cashback, loyalty rewards, festival campaigns), and a complete admin panel with user management (block/unblock, action logs).",
+  "architectural_notes": [
+    "Backend: Node.js + Express + MySQL with bcrypt, JWT, multer for file uploads, rate limiting, and CORS",
+    "Frontend: React.js with Auth context, Wallet context, React Router protected routes, and toast notifications",
+    "DB tables: users, wallet_transactions, balance_requests, withdrawals, lotteries, tickets, draws",
+    "File uploads stored in /uploads directory; payment screenshot URL saved in balance_requests",
+    "Background jobs handle OTP email sending, scheduled lottery draws, and automated winner crediting",
+    "Role-based access control: user vs admin roles enforced via JWT middleware on all protected routes",
+    "Lottery pools support multiple draw intervals (1h/3h/5h/12h/Daily/Weekly) with scheduled draws regardless of fill status; max 50 tickets per user per pool",
+    "Prize distribution: 90% revenue to winners, minimum 70% participants win, tiered 1st/2nd/3rd prizes, decreasing rewards based on tickets sold",
+    "Lottery digit formats: 6-digit for hourly draws, 9-digit for daily draws, 12-digit for weekly jackpot draws",
+    "Bonus/promo system: admin_bonus, first_user_discount, referral_bonus, cashback, loyalty_reward, festival_campaign transaction types added to wallet; promo eligibility checks on ticket purchase"
+  ],
+  "known_issues": [
+    "Website and admin panel not rendering/displaying correctly after Version 3 deployment"
+  ],
+  "isFixRequest": true,
+  "existing_features": [
+    {
+      "id": "feature-build-the-react-frontend-with-react-router-for-navigation-and-the-following-pages-landing-home-register-with-otp-step-login-user-dashboard-coin-balance-active-lotteries-summary-lottery-list-buy-ticket-with-number-picker-for-3-digit-5-digit-or-auto-generate-for-jackpot-festival-my-tickets-add-balance-with-base64-image-capture-for-payment-proof-withdrawal-request-transaction-history-and-a-full-admin-section-with-sub-pages-admin-dashboard-balance-requests-management-withdrawal-management-lottery-management-create-edit-user-management-and-draw-results-declaration",
+      "title": "Build the React frontend with React Router for navigation and the following pages: Landing/Home, Register (with OTP step), Login, User Dashboard (coin balance + active lotteries summary), Lottery List, Buy Ticket (with number picker for 3-digit/5-digit or auto-generate for jackpot/festival), My Tickets, Add Balance (with base64 image capture for payment proof), Withdrawal Request, Transaction History, and a full Admin section with sub-pages: Admin Dashboard, Balance Requests Management, Withdrawal Management, Lottery Management (create/edit), User Management, and Draw Results Declaration.",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-an-authcontext-that-stores-the-session-token-user-data-id-name-email-role-coinsbalance-in-react-state-and-localstorage-implement-a-walletcontext-that-tracks-the-current-coin-balance-and-provides-a-refresh-function-both-contexts-expose-loading-and-error-states-all-api-calls-to-the-motoko-backend-pass-the-session-token-after-buying-a-ticket-or-admin-approval-the-wallet-balance-auto-refreshes",
+      "title": "Implement an AuthContext that stores the session token, user data (id, name, email, role, coinsBalance) in React state and localStorage. Implement a WalletContext that tracks the current coin balance and provides a refresh function. Both contexts expose loading and error states. All API calls to the Motoko backend pass the session token. After buying a ticket or admin approval, the wallet balance auto-refreshes.",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-reusable-ui-components-navbar-shows-app-logo-coin-balance-with-coin-icon-user-name-logout-button-shows-admin-link-for-admin-users-lotterycard-displays-lottery-name-type-badge-ticket-price-prize-amount-draw-countdown-timer-buy-button-ticketcard-shows-ticket-number-lottery-name-purchase-time-win-loss-status-badge-transactionrow-type-icon-description-amount-with-color-coding-date-numberpicker-allows-selecting-digits-0-9-per-position-for-3-digit-and-5-digit-lotteries-paymentproofupload-file-input-that-converts-image-to-base64-and-a-countdowntimer-component",
+      "title": "Build reusable UI components: Navbar (shows app logo, coin balance with coin icon, user name, logout button; shows admin link for admin users), LotteryCard (displays lottery name, type badge, ticket price, prize amount, draw countdown timer, buy button), TicketCard (shows ticket number, lottery name, purchase time, win/loss status badge), TransactionRow (type icon, description, amount with +/- color coding, date), NumberPicker (allows selecting digits 0-9 per position for 3-digit and 5-digit lotteries), PaymentProofUpload (file input that converts image to base64), and a CountdownTimer component.",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-form-validation-and-user-feedback-throughout-the-frontend-all-forms-validate-required-fields-and-show-inline-error-messages-before-submission-use-toast-notifications-top-right-auto-dismiss-after-4-seconds-for-success-and-error-outcomes-on-all-async-operations-show-skeleton-loaders-or-spinners-during-data-fetching-disable-submit-buttons-during-pending-requests-to-prevent-double-submission",
+      "title": "Implement form validation and user feedback throughout the frontend: all forms validate required fields and show inline error messages before submission; use toast notifications (top-right, auto-dismiss after 4 seconds) for success and error outcomes on all async operations; show skeleton loaders or spinners during data fetching; disable submit buttons during pending requests to prevent double submission.",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-a-rich-gold-and-dark-themed-visual-design-across-the-entire-application-use-a-deep-charcoal-dark-background-1a1a2e-or-similar-gold-amber-accent-colors-f59e0b-fbbf24-for-buttons-badges-and-highlights-and-cream-white-for-body-text-use-a-serif-or-display-font-for-headings-to-evoke-a-premium-lottery-aesthetic-card-components-should-have-subtle-dark-gradients-and-a-faint-gold-border-the-landing-page-should-feature-a-hero-section-with-large-headline-animated-coin-ticket-illustrations-css-based-and-a-call-to-action-ensure-full-responsiveness-for-mobile-tablet-and-desktop",
+      "title": "Apply a rich, gold-and-dark themed visual design across the entire application: use a deep charcoal/dark background (#1a1a2e or similar), gold/amber accent colors (#f59e0b, #fbbf24) for buttons, badges, and highlights, and cream/white for body text. Use a serif or display font for headings to evoke a premium lottery aesthetic. Card components should have subtle dark gradients and a faint gold border. The landing page should feature a hero section with large headline, animated coin/ticket illustrations (CSS-based), and a call-to-action. Ensure full responsiveness for mobile, tablet, and desktop.",
+      "reqIds": [
+        "REQ-11"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-on-the-admin-draw-results-declaration-page-provide-a-form-to-select-an-active-lottery-from-a-dropdown-input-the-winning-number-manually-and-submit-to-call-the-declaredraw-backend-function-after-declaration-display-a-results-summary-showing-winning-number-total-tickets-sold-number-of-winners-and-total-prize-coins-distributed",
+      "title": "On the Admin Draw Results Declaration page, provide a form to select an active lottery from a dropdown, input the winning number manually, and submit to call the declareDraw backend function. After declaration, display a results summary showing: winning number, total tickets sold, number of winners, and total prize coins distributed.",
+      "reqIds": [
+        "REQ-12"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-on-the-lottery-list-page-and-lotterycard-component-display-real-time-pool-stats-for-each-lottery-tickets-sold-remaining-tickets-total-pool-amount-in-coins-and-a-live-countdown-to-draw-time-poll-getlotterylivestats-every-30-seconds-using-react-query-with-refetchinterval-show-a-progress-bar-indicating-how-full-the-pool-is-ticketssold-maxtickets-display-the-draw-type-badge-daily-weekly-1h-3h-5h-12h",
+      "title": "On the Lottery List page and LotteryCard component, display real-time pool stats for each lottery: tickets sold, remaining tickets, total pool amount (in coins), and a live countdown to draw time. Poll `getLotteryLiveStats` every 30 seconds using React Query with `refetchInterval`. Show a progress bar indicating how full the pool is (ticketsSold / maxTickets). Display the draw type badge (Daily / Weekly / 1h / 3h / 5h / 12h).",
+      "reqIds": [
+        "REQ-18"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-public-draw-results-page-at-results-lotteryid-that-fetches-and-displays-the-full-result-transparency-data-from-getdrawresults-show-the-winning-number-prominently-draw-metadata-draw-type-date-time-total-tickets-total-prize-distributed-and-a-ranked-table-of-winners-with-columns-rank-username-ticket-number-prize-amount-style-the-top-3-rows-with-gold-silver-bronze-highlights-consistent-with-the-existing-gold-and-dark-theme",
+      "title": "Create a public Draw Results page at `/results/:lotteryId` that fetches and displays the full result transparency data from `getDrawResults`. Show the winning number prominently, draw metadata (draw type, date/time, total tickets, total prize distributed), and a ranked table of winners with columns: Rank, Username, Ticket Number, Prize Amount. Style the top 3 rows with gold/silver/bronze highlights consistent with the existing gold-and-dark theme.",
+      "reqIds": [
+        "REQ-19"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-admin-lottery-management-page-to-support-creating-pools-for-all-draw-types-daily-weekly-1h-3h-5h-12h-the-create-form-must-include-fields-for-draw-type-interval-ticket-price-max-tickets-pool-capacity-draw-time-datetime-picker-and-1st-prize-fixed-amount-update-the-admin-declaredraw-ui-to-trigger-the-draw-for-any-selected-active-lottery-and-display-the-full-results-summary-winners-count-total-prize-distributed-top-3-winners-after-declaration",
+      "title": "Update the Admin Lottery Management page to support creating pools for all draw types (Daily, Weekly, 1h, 3h, 5h, 12h). The create form must include fields for: draw type/interval, ticket price, max tickets (pool capacity), draw time (datetime picker), and 1st prize fixed amount. Update the admin `declareDraw` UI to trigger the draw for any selected active lottery and display the full results summary (winners count, total prize distributed, top 3 winners) after declaration.",
+      "reqIds": [
+        "REQ-20"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-buy-ticket-page-to-enforce-the-50-ticket-per-user-limit-per-pool-before-submission-query-the-user-s-existing-ticket-count-for-the-selected-lottery-and-show-an-inline-warning-if-they-are-approaching-or-have-reached-the-limit-after-a-successful-purchase-immediately-refresh-the-wallet-balance-and-the-lottery-s-live-stats-via-react-query-cache-invalidation",
+      "title": "Update the Buy Ticket page to enforce the 50-ticket-per-user limit per pool. Before submission, query the user's existing ticket count for the selected lottery and show an inline warning if they are approaching or have reached the limit. After a successful purchase, immediately refresh the wallet balance and the lottery's live stats via React Query cache invalidation.",
+      "reqIds": [
+        "REQ-21"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-view-results-link-button-to-each-completed-lottery-entry-in-the-lottery-list-my-tickets-and-admin-draw-declaration-pages-navigating-to-results-lotteryid-on-the-my-tickets-page-for-winning-tickets-show-the-prize-amount-and-a-direct-link-to-the-full-draw-results-winning-ticket-credits-must-be-reflected-in-the-transaction-history-as-a-win-transaction-type-with-the-lottery-name-as-description",
+      "title": "Add a 'View Results' link/button to each completed lottery entry in the Lottery List, My Tickets, and Admin Draw Declaration pages, navigating to `/results/:lotteryId`. On the My Tickets page, for winning tickets, show the prize amount and a direct link to the full draw results. Winning ticket credits must be reflected in the transaction history as a #win transaction type with the lottery name as description.",
+      "reqIds": [
+        "REQ-22"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-frontend-numberpicker-component-and-buy-ticket-page-to-render-the-correct-number-of-digit-slots-based-on-the-selected-lottery-s-draw-interval-6-digits-for-hourly-9-digits-for-daily-and-12-digits-for-weekly-jackpot-display-the-digit-format-and-draw-type-clearly-on-the-buy-ticket-page-update-lotterycard-and-lotterylist-to-show-the-correct-digit-format-badge-6-digit-9-digit-12-digit-alongside-the-draw-type",
+      "title": "Update the frontend NumberPicker component and Buy Ticket page to render the correct number of digit slots based on the selected lottery's draw interval: 6 digits for hourly, 9 digits for daily, and 12 digits for weekly jackpot. Display the digit format and draw type clearly on the Buy Ticket page. Update LotteryCard and LotteryList to show the correct digit format badge (6-digit / 9-digit / 12-digit) alongside the draw type.",
+      "reqIds": [
+        "REQ-24"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-a-promotions-bonuses-section-in-the-admin-control-panel-frontend-add-a-new-admin-route-at-admin-promotions-with-a-page-that-includes-1-a-grant-bonus-coins-form-with-user-search-select-coin-amount-input-description-field-and-submit-button-that-calls-grantadminbonus-2-a-promotions-table-listing-all-promotions-with-columns-name-type-discount-bonus-active-window-status-active-inactive-and-actions-to-edit-or-deactivate-3-a-create-promotion-dialog-form-with-fields-promotion-type-dropdown-with-all-7-types-name-description-discount-percent-or-bonus-coin-amount-start-datetime-end-datetime-and-applicable-lottery-pool-optional-for-pool-specific-discounts-4-show-active-promotions-as-highlighted-cards-at-the-top-of-the-page-add-a-link-to-the-promotions-page-in-the-admin-sidebar-navbar",
+      "title": "Build a Promotions & Bonuses section in the Admin Control Panel frontend. Add a new admin route at /admin/promotions with a page that includes: (1) A 'Grant Bonus Coins' form with user search/select, coin amount input, description field, and submit button that calls grantAdminBonus. (2) A Promotions table listing all promotions with columns: Name, Type, Discount/Bonus, Active Window, Status (Active/Inactive), and actions to Edit or Deactivate. (3) A 'Create Promotion' dialog/form with fields: promotion type (dropdown with all 7 types), name/description, discount percent or bonus coin amount, start datetime, end datetime, and applicable lottery pool (optional, for pool-specific discounts). (4) Show active promotions as highlighted cards at the top of the page. Add a link to the Promotions page in the admin sidebar/navbar.",
+      "reqIds": [
+        "REQ-26"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-display-active-promotions-and-bonus-eligibility-information-to-users-on-the-frontend-on-the-buy-ticket-page-if-any-active-promotion-applies-to-the-selected-lottery-first-user-discount-limited-time-discount-cashback-festival-campaign-show-a-prominently-styled-promo-badge-or-banner-indicating-the-discount-or-bonus-the-user-will-receive-on-the-user-dashboard-show-a-promotions-widget-listing-currently-active-campaigns-the-user-can-benefit-from-on-the-transaction-history-page-ensure-all-bonus-promo-transaction-types-adminbonus-referralbonus-cashback-loyaltyreward-festivalbonus-firstuserdiscount-are-displayed-with-distinct-colored-icons-and-labels-consistent-with-the-gold-and-dark-theme",
+      "title": "Display active promotions and bonus eligibility information to users on the frontend. On the Buy Ticket page, if any active promotion applies to the selected lottery (first-user discount, limited-time discount, cashback, festival campaign), show a prominently styled promo badge or banner indicating the discount or bonus the user will receive. On the User Dashboard, show a 'Promotions' widget listing currently active campaigns the user can benefit from. On the Transaction History page, ensure all bonus/promo transaction types (#adminBonus, #referralBonus, #cashback, #loyaltyReward, #festivalBonus, #firstUserDiscount) are displayed with distinct colored icons and labels consistent with the gold-and-dark theme.",
+      "reqIds": [
+        "REQ-27"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-admin-user-management-page-admin-users-to-support-full-user-management-with-block-unblock-controls-and-action-logs-the-page-must-1-fetch-and-display-all-users-in-a-searchable-sortable-table-with-columns-user-id-name-email-role-status-active-blocked-badge-coin-balance-joined-date-and-actions-2-each-user-row-must-have-a-block-button-if-active-or-unblock-button-if-blocked-which-opens-a-confirmation-modal-the-block-modal-must-include-an-optional-reason-text-input-on-confirmation-call-blockuser-or-unblockuser-and-refresh-the-table-3-add-an-action-logs-tab-or-section-on-the-same-page-that-fetches-listadminactionlogs-and-displays-them-in-a-table-with-columns-admin-target-user-action-block-unblock-role-change-reason-date-time-style-blocked-user-rows-with-a-subtle-red-tint-style-the-action-logs-table-with-timestamps-and-color-coded-action-badges-consistent-with-the-gold-and-dark-theme",
+      "title": "Update the Admin User Management page (/admin/users) to support full user management with block/unblock controls and action logs. The page must: (1) Fetch and display all users in a searchable, sortable table with columns: User ID, Name, Email, Role, Status (Active / Blocked badge), Coin Balance, Joined Date, and Actions. (2) Each user row must have a 'Block' button (if active) or 'Unblock' button (if blocked), which opens a confirmation modal. The block modal must include an optional reason text input. On confirmation, call blockUser or unblockUser and refresh the table. (3) Add an 'Action Logs' tab or section on the same page that fetches listAdminActionLogs and displays them in a table with columns: Admin, Target User, Action (Block/Unblock/Role Change), Reason, Date & Time. Style blocked user rows with a subtle red tint. Style the Action Logs table with timestamps and color-coded action badges consistent with the gold-and-dark theme.",
+      "reqIds": [
+        "REQ-29"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-audit-and-fix-the-root-app-tsx-router-configuration-to-ensure-all-user-facing-routes-login-register-dashboard-lotteries-lotteries-id-buy-my-tickets-add-balance-withdraw-transactions-results-lotteryid-and-all-admin-routes-admin-admin-dashboard-admin-balance-requests-admin-withdrawals-admin-lotteries-admin-users-admin-promotions-admin-draw-are-correctly-registered-with-tanstack-router-and-render-their-respective-page-components-without-blank-screens-or-routing-errors-verify-that-route-definitions-reference-the-correct-imported-page-components-and-that-no-route-is-missing-a-component-assignment",
+      "title": "Audit and fix the root App.tsx router configuration to ensure all user-facing routes (/, /login, /register, /dashboard, /lotteries, /lotteries/:id/buy, /my-tickets, /add-balance, /withdraw, /transactions, /results/:lotteryId) and all admin routes (/admin, /admin/dashboard, /admin/balance-requests, /admin/withdrawals, /admin/lotteries, /admin/users, /admin/promotions, /admin/draw) are correctly registered with TanStack Router and render their respective page components without blank screens or routing errors. Verify that route definitions reference the correct imported page components and that no route is missing a component assignment.",
+      "reqIds": [
+        "REQ-37"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-audit-and-fix-the-authcontext-so-that-after-internet-identity-login-the-user-profile-is-correctly-fetched-from-the-backend-actor-and-stored-in-context-state-transitioning-the-ui-from-unauthenticated-to-authenticated-view-ensure-that-unauthenticated-users-accessing-protected-routes-are-redirected-to-login-and-that-admin-users-can-access-admin-routes-confirm-that-the-internetidentityprovider-and-authcontext-provider-are-correctly-nested-in-main-tsx-and-app-tsx-so-that-context-values-are-available-throughout-the-component-tree",
+      "title": "Audit and fix the AuthContext so that after Internet Identity login the user profile is correctly fetched from the backend actor and stored in context state, transitioning the UI from unauthenticated to authenticated view. Ensure that unauthenticated users accessing protected routes are redirected to /login, and that admin users can access /admin/* routes. Confirm that the InternetIdentityProvider and AuthContext provider are correctly nested in main.tsx and App.tsx so that context values are available throughout the component tree.",
+      "reqIds": [
+        "REQ-38"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-audit-and-fix-the-navbar-component-to-correctly-render-on-every-page-the-navbar-must-be-mounted-at-the-application-root-level-app-tsx-layout-for-authenticated-users-it-must-show-the-app-logo-coin-balance-user-display-name-and-a-logout-button-for-admin-users-it-must-additionally-show-an-admin-panel-navigation-link-for-unauthenticated-users-it-must-show-only-the-logo-and-a-login-button-fix-any-issue-causing-the-navbar-to-be-absent-or-invisible-e-g-incorrect-z-index-missing-layout-wrapper-context-not-available-at-mount-time",
+      "title": "Audit and fix the Navbar component to correctly render on every page. The Navbar must be mounted at the application root level (App.tsx layout). For authenticated users it must show the app logo, coin balance, user display name, and a logout button. For admin users it must additionally show an 'Admin Panel' navigation link. For unauthenticated users it must show only the logo and a Login button. Fix any issue causing the Navbar to be absent or invisible (e.g. incorrect z-index, missing layout wrapper, context not available at mount time).",
+      "reqIds": [
+        "REQ-39"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-audit-and-fix-the-admin-panel-layout-so-that-all-admin-sub-pages-dashboard-balance-requests-withdrawal-management-lottery-management-user-management-promotions-draw-declaration-are-accessible-via-sidebar-navigation-links-and-render-their-content-correctly-ensure-a-shared-admin-layout-wrapper-component-is-applied-to-all-admin-routes-and-that-sidebar-links-correctly-navigate-between-admin-pages-without-blank-screens",
+      "title": "Audit and fix the Admin panel layout so that all admin sub-pages (Dashboard, Balance Requests, Withdrawal Management, Lottery Management, User Management, Promotions, Draw Declaration) are accessible via sidebar navigation links and render their content correctly. Ensure a shared admin layout wrapper component is applied to all /admin/* routes and that sidebar links correctly navigate between admin pages without blank screens.",
+      "reqIds": [
+        "REQ-40"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-audit-and-fix-the-useactor-hook-and-all-react-query-hooks-in-usequeries-ts-to-ensure-the-backend-actor-is-correctly-initialised-after-internet-identity-login-and-is-passed-to-all-query-and-mutation-functions-fix-any-case-where-actor-is-null-or-undefined-at-the-time-of-a-query-execution-which-causes-api-calls-to-silently-fail-and-pages-to-render-empty-add-null-guards-so-that-queries-dependent-on-the-actor-are-disabled-enabled-false-until-the-actor-is-available-and-display-a-loading-state-rather-than-a-blank-page-while-the-actor-initialises",
+      "title": "Audit and fix the useActor hook and all React Query hooks in useQueries.ts to ensure the backend actor is correctly initialised after Internet Identity login and is passed to all query and mutation functions. Fix any case where actor is null or undefined at the time of a query execution, which causes API calls to silently fail and pages to render empty. Add null-guards so that queries dependent on the actor are disabled (enabled: false) until the actor is available, and display a loading state rather than a blank page while the actor initialises.",
+      "reqIds": [
+        "REQ-41"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-audit-and-fix-react-query-tanstack-query-configuration-in-the-application-ensure-queryclientprovider-is-correctly-mounted-at-the-app-root-in-main-tsx-wrapping-the-entire-application-add-error-boundaries-or-per-query-error-fallback-ui-so-that-a-failed-backend-call-displays-a-visible-error-message-instead-of-a-blank-page-ensure-no-query-throws-an-unhandled-error-that-crashes-the-react-tree-and-produces-a-white-screen",
+      "title": "Audit and fix React Query (TanStack Query) configuration in the application. Ensure QueryClientProvider is correctly mounted at the app root in main.tsx wrapping the entire application. Add error boundaries or per-query error fallback UI so that a failed backend call displays a visible error message instead of a blank page. Ensure no query throws an unhandled error that crashes the React tree and produces a white screen.",
+      "reqIds": [
+        "REQ-42"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "User authentication with email OTP registration, verification, login, and JWT sessions",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Coin-based wallet system with balance tracking and transaction history",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Balance addition via screenshot upload with manual admin approval workflow",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Lottery ticket purchasing system supporting 3-digit, 5-digit, Jackpot, and Festival types",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Automated draw result calculation and winner coin crediting at scheduled draw times",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Withdrawal request system with minimum 500 coins limit and manual admin approval",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Full admin panel: dashboard stats, user management, balance/withdrawal approvals, lottery and draw management",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "React frontend with all user and admin pages, protected routes, auth/wallet contexts, and responsive UI",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Implement the backend data models in Motoko for the single-actor canister, covering: users (id, name, email, passwordHash, role, isVerified, otp, otpExpiry, coinsBalance, createdAt), walletTransactions (id, userId, transactionType, amount, lotteryId, ticketId, description, createdAt), balanceRequests (id, userId, amount, paymentScreenshotUrl, status, adminNotes, createdAt, updatedAt), withdrawals (id, userId, amount, upiId, bankDetails, status, adminNotes, createdAt, updatedAt), lotteries (id, name, type, ticketPrice, prizeAmount, drawTime, status, createdAt), tickets (id, userId, lotteryId, ticketNumber, purchaseTime, isWinner, prizeAmount), and draws (id, lotteryId, winningNumber, drawTime, totalTickets, totalPrizeDistributed, createdAt). Use stable variables with HashMap or TrieMap for persistence.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-10",
+      "summary": "Implement user authentication endpoints in the Motoko actor: register (creates user with hashed password and generates a 6-digit OTP stored in the user record with 10-minute expiry), verifyOtp (validates OTP and marks user as verified), login (validates credentials and returns a session token), resendOtp (regenerates OTP for unverified users). Use SHA-256 or similar for password hashing within Motoko. Session tokens should be random 32-byte hex strings stored in a stable HashMap keyed by token.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-11",
+      "summary": "Implement wallet endpoints in the Motoko actor: addBalanceRequest (creates a balance request record with uploaded screenshot URL stored as a Text field, status=pending), getTransactions (returns all wallet transactions for the authenticated user), getBalance (returns the current coinsBalance for the authenticated user). All endpoints require a valid session token passed as a query parameter or in the call.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-12",
+      "summary": "Implement lottery and ticket endpoints in the Motoko actor: listActiveLotteries (returns all lotteries with status=active), getLotteryById (returns details for a specific lottery), buyTicket (deducts ticketPrice from user's coinsBalance, creates a ticket record with the chosen number, creates a wallet transaction of type buy_ticket; fails if balance is insufficient), getMyTickets (returns all tickets for authenticated user), getTicketResult (returns the ticket record including isWinner and prizeAmount after draw).",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-13",
+      "summary": "Implement withdrawal endpoints in the Motoko actor: requestWithdrawal (validates that the user has at least 500 coins, creates a withdrawal record with status=pending; does NOT deduct coins yet), getMyWithdrawals (returns all withdrawal requests for the authenticated user).",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-14",
+      "summary": "Implement admin endpoints in the Motoko actor, accessible only to users with role=admin: listPendingBalanceRequests, approveBalanceRequest (updates status=approved, credits coinsBalance to user, creates add_balance wallet transaction), rejectBalanceRequest (updates status=rejected with adminNotes), listWithdrawals, approveWithdrawal (updates status=completed, deducts coins from user balance, creates withdraw wallet transaction), rejectWithdrawal (updates status=rejected), createLottery, updateLottery, declareDraw (sets winning number, marks matching tickets as isWinner=true, credits prize coins to winners, creates win wallet transactions, marks lottery as completed, creates a draw record), listAllUsers, getDashboardStats (total revenue from ticket sales, total active users, active lotteries count, pending approvals count).",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-15",
+      "summary": "Add Daily (3-digit) and Weekly (5-digit) lottery types with additional 1h, 3h, 5h, and 12h timed draw intervals; support multiple dynamic prize pools per type with fixed ticket price, fixed max tickets, max 50 tickets per user, draw runs on schedule even if pool not full, and admin can create new pools",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-16",
+      "summary": "Live tracking UI showing tickets sold, remaining tickets, and total pool amount per lottery/draw in real time",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-17",
+      "summary": "Prize distribution engine: 90% of total revenue distributed to winners, minimum 70% of participants win, fixed 1st prize amount, tiered higher rewards for 1st/2nd/3rd place, decreasing prize amounts for lower ranks based on total tickets sold",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-18",
+      "summary": "Full result transparency page: publish draw results with username, rank, winning number, and prize amount for every draw; integrate with wallet deduction on ticket purchase and credit on win, transaction logs, and admin control panel for draw management",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-19",
+      "summary": "Extend the Motoko backend data model to support lottery types: Daily (3-digit), Weekly (5-digit), 1h, 3h, 5h, and 12h timed draws. Add a `drawInterval` field to the Lottery type (variant: #daily, #weekly, #h1, #h3, #h5, #h12). Each lottery pool must store: ticketPrice (fixed), maxTickets (fixed cap), ticketsPerUserMax (hard limit of 50), drawTime (scheduled timestamp), status (#active | #completed | #cancelled), totalTicketsSold, totalPoolAmount (ticketPrice * totalTicketsSold). Admin can create multiple independent pools of the same draw type.",
+      "reqIds": [
+        "REQ-13"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-20",
+      "summary": "Enforce ticket purchase rules in the buyTicket backend endpoint: reject purchase if the user has already bought 50 tickets for that lottery pool; reject if the pool is at maxTickets capacity; deduct ticketPrice coins from user wallet and increment totalTicketsSold and totalPoolAmount on the lottery record atomically.",
+      "reqIds": [
+        "REQ-14"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-21",
+      "summary": "Implement a scheduled draw execution function in the Motoko actor. When `declareDraw` is called for a lottery (by admin or automated trigger), it must: (1) run regardless of whether maxTickets is reached, (2) compute 90% of totalPoolAmount as the prize fund, (3) determine winners using the tiered prize distribution logic (minimum 70% of ticket holders win), (4) assign fixed 1st prize, higher rewards for 2nd and 3rd, decreasing amounts for subsequent ranks based on total tickets sold, (5) credit winners' wallets, (6) create wallet transaction records of type #win for each winner, (7) mark lottery status as #completed, (8) create a Draw record storing winningNumber, drawTime, totalTickets, totalPrizeDistributed.",
+      "reqIds": [
+        "REQ-15"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-22",
+      "summary": "Add a backend endpoint `getDrawResults(lotteryId)` that returns the full result set for a completed draw: for each winner, include their username (display name), rank (1st, 2nd, 3rd, etc.), ticket number, and prize amount. Also return the winning number, total tickets sold, total prize distributed, and draw timestamp. This endpoint must be publicly accessible (no auth required).",
+      "reqIds": [
+        "REQ-16"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-23",
+      "summary": "Add a backend endpoint `getLotteryLiveStats(lotteryId)` that returns real-time pool statistics: ticketsSold, remainingTickets (maxTickets - ticketsSold), totalPoolAmount, drawTime, and currentStatus. This endpoint must be publicly accessible.",
+      "reqIds": [
+        "REQ-17"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-24",
+      "summary": "Update lottery draw types to use 6-digit hourly, 9-digit daily, and 12-digit weekly jackpot formats with massive prize pools",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-25",
+      "summary": "Bonus and promotional system: admin can grant bonus coins to users, first user to join a new pool gets 90% ticket price discount, referral bonuses, limited-time discount tickets, cashback rewards, loyalty rewards for frequent participation, and festival/event-based bonus campaigns — all integrated with wallet, transaction logging, and admin panel",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-26",
+      "summary": "Admin user management: view all users, block/unblock accounts, restrict blocked users from login/ticket purchase/withdrawals/bonus eligibility, and maintain admin action logs (who blocked/unblocked and when) — integrated with auth and RBAC",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-27",
+      "summary": "Update the lottery draw digit formats in the backend: hourly draws use 6-digit ticket numbers, daily draws use 9-digit ticket numbers, and weekly jackpot draws use 12-digit ticket numbers. Update all relevant backend type definitions, ticket validation, and draw logic to enforce these digit lengths per draw interval type.",
+      "reqIds": [
+        "REQ-23"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-29",
+      "summary": "Implement a bonus and promotional system in the Motoko backend. Add the following data models and endpoints: (1) A Promotion type storing id, promoType (#adminBonus | #firstUserDiscount | #referralBonus | #limitedDiscount | #cashback | #loyaltyReward | #festivalCampaign), description, discountPercent or bonusAmount, startTime, endTime, isActive, and createdBy. (2) A UserPromoUsage record tracking which user used which promotion and when. (3) An AdminBonus endpoint allowing admin to grant a specified number of bonus coins directly to any user's wallet, logging the transaction as type #adminBonus. (4) A first-user-in-pool discount: when the very first ticket is purchased in a newly created lottery pool, the ticket price is reduced by 90% for that user; the discount is logged as a #firstUserDiscount wallet transaction. (5) Referral bonus: store a referral code per user at registration; when a referred user makes their first ticket purchase, credit both referrer and referee with a configurable bonus coin amount. (6) Limited-time discount tickets: admin can activate a promotion that reduces ticket price by a set percentage for a specified time window; buyTicket applies the discount if an active limited-time promotion exists for that pool or globally. (7) Cashback rewards: after a ticket purchase, if a cashback promotion is active, credit the user a percentage of the ticket price back to their wallet as a #cashback transaction. (8) Loyalty rewards: track each user's total ticket purchases; when a user crosses configurable thresholds (e.g., every 10 tickets), automatically credit a loyalty bonus coin amount as a #loyaltyReward transaction. (9) Festival/event campaigns: admin can create a named festival campaign with a start/end time and bonus coin award; all users who purchase a ticket during the campaign window receive the bonus. All bonus and promotion credits must create wallet transaction records with appropriate type and description. Add admin endpoints: createPromotion, updatePromotion, deactivatePromotion, listPromotions, grantAdminBonus(userId, amount, description).",
+      "reqIds": [
+        "REQ-25"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-32",
+      "summary": "Extend the Motoko backend user model and authentication to support account blocking. Add an isBlocked boolean field (default false) and a blockedAt nullable timestamp to the UserProfile type. Add an AdminActionLog stable variable (TrieMap or array) storing records with fields: id, adminPrincipal, targetUserId, action (#block | #unblock | #roleChange), reason (optional Text), and timestamp. Implement admin endpoints: blockUser(userId, reason) — sets isBlocked=true, records timestamp, creates an AdminActionLog entry; unblockUser(userId) — sets isBlocked=false, creates an AdminActionLog entry; listAdminActionLogs — returns all action log entries sorted by timestamp descending, accessible only to admin. Enforce isBlocked checks in the following backend endpoints: login (reject with 'Account is blocked' error), buyTicket (reject blocked users), requestWithdrawal (reject blocked users), and all bonus/promotion credit functions (skip blocked users).",
+      "reqIds": [
+        "REQ-28"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-34",
+      "summary": "Generate a migration module (backend/migration.mo) to safely upgrade existing stable state to include the new fields added in this build: isBlocked (default false) and blockedAt (null) on all existing UserProfile records, a new empty stable TrieMap for AdminActionLog entries, a new empty stable TrieMap for Promotion records, a new empty stable TrieMap for UserPromoUsage records, and a referralCode field on all existing UserProfile records (auto-generate a unique code for each existing user during migration).",
+      "reqIds": [
+        "REQ-30"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-35",
+      "summary": "Audit and fix the root App.tsx router configuration to ensure all user-facing routes (/, /login, /register, /dashboard, /lotteries, /lotteries/:id/buy, /my-tickets, /add-balance, /withdraw, /transactions, /results/:lotteryId) and all admin routes (/admin, /admin/dashboard, /admin/balance-requests, /admin/withdrawals, /admin/lotteries, /admin/users, /admin/promotions, /admin/draw) are correctly registered and render their respective page components without blank screens or routing errors.",
+      "reqIds": [
+        "REQ-31"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-36",
+      "summary": "Audit and fix the AuthContext and authentication flow so that after Internet Identity login, the user profile is correctly fetched from the backend, stored in context state, and the UI transitions to the authenticated view. Ensure that unauthenticated users are redirected to /login when attempting to access protected routes, and that admin users can access /admin/* routes without being redirected.",
+      "reqIds": [
+        "REQ-32"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-37",
+      "summary": "Audit and fix the Navbar component to correctly render on all pages. Ensure the logo, coin balance (from WalletContext), user display name, and logout button are visible for authenticated users. For admin users, display an 'Admin Panel' navigation link. For unauthenticated users, show only the logo and a Login button. Ensure the Navbar is mounted at the application root level so it appears on every page.",
+      "reqIds": [
+        "REQ-33"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-38",
+      "summary": "Audit and fix the Admin panel layout and sidebar so that all admin sub-pages (Dashboard, Balance Requests, Withdrawal Management, Lottery Management, User Management, Promotions, Draw Declaration) are accessible via sidebar navigation links and render their content correctly. Ensure the admin layout wrapper is applied to all /admin/* routes and that the sidebar links correctly navigate between admin pages.",
+      "reqIds": [
+        "REQ-34"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-39",
+      "summary": "Audit and resolve any React Query (TanStack Query) configuration issues that may be causing pages to render blank due to failed or uncaught query errors. Ensure all useQuery and useMutation hooks have proper error boundaries or fallback UI, and that failed backend calls display an error message rather than a blank page. Verify the QueryClient is correctly provided at the app root.",
+      "reqIds": [
+        "REQ-35"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-40",
+      "summary": "Audit and fix the backend actor integration in the frontend. Ensure the useActor hook correctly returns an authenticated actor after Internet Identity login, and that all page-level query hooks (useQueries.ts) correctly invoke backend canister methods using the actor. Fix any issues where actor is null or undefined causing API calls to silently fail and pages to render empty.",
+      "reqIds": [
+        "REQ-36"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-47",
+      "summary": "Audit and fix the global CSS and Tailwind configuration to ensure all page content is visible. Verify that index.css and tailwind.config.js correctly define the dark gold theme CSS custom properties and that the body background and text colors are applied so that page content is not hidden (e.g. white text on white background or black text on black background). Ensure the root div in index.html has the correct class or style so the app fills the viewport and is visible.",
+      "reqIds": [
+        "REQ-43"
+      ],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "Lottery Coin System",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}
