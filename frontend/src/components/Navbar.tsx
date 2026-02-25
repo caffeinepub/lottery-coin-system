@@ -44,6 +44,8 @@ export default function Navbar() {
         { href: '/lotteries', label: 'Lotteries', icon: <Trophy size={16} /> },
       ];
 
+  const isAdmin = isAuthenticated && userProfile?.role === 'admin';
+
   return (
     <header className="sticky top-0 z-50 w-full bg-card/95 backdrop-blur border-b border-border shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -66,10 +68,10 @@ export default function Navbar() {
                 {link.label}
               </a>
             ))}
-            {isAuthenticated && userProfile?.role === 'admin' && (
+            {isAdmin && (
               <a
-                href="/admin"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-primary hover:bg-primary/10 transition-colors font-medium"
+                href="/admin/dashboard"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-amber-400 hover:text-amber-300 hover:bg-amber-400/10 transition-colors border border-amber-400/30 hover:border-amber-300/50"
               >
                 <Shield size={16} />
                 Admin Panel
@@ -141,10 +143,10 @@ export default function Navbar() {
                 {link.label}
               </a>
             ))}
-            {isAuthenticated && userProfile?.role === 'admin' && (
+            {isAdmin && (
               <a
-                href="/admin"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-primary hover:bg-primary/10 transition-colors font-medium"
+                href="/admin/dashboard"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-amber-400 hover:text-amber-300 hover:bg-amber-400/10 transition-colors border border-amber-400/30"
                 onClick={() => setMobileOpen(false)}
               >
                 <Shield size={16} />

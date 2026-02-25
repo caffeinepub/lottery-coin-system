@@ -2,6 +2,7 @@ import React from 'react';
 import { useGetDashboardStats } from '@/hooks/useQueries';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy, Users, Coins, Clock, ArrowRight } from 'lucide-react';
+import QuickCreditCoinsCard from '@/components/QuickCreditCoinsCard';
 
 export default function AdminDashboard() {
   const { data: stats, isLoading, error } = useGetDashboardStats();
@@ -59,33 +60,41 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <h2 className="text-lg font-bold text-foreground mb-4">Quick Actions</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {[
-            { href: '/admin/lotteries', label: 'Manage Lotteries', icon: '🎰', desc: 'Create and manage lottery pools' },
-            { href: '/admin/balance-requests', label: 'Balance Requests', icon: '💰', desc: 'Approve or reject top-up requests' },
-            { href: '/admin/withdrawals', label: 'Withdrawals', icon: '💸', desc: 'Process withdrawal requests' },
-            { href: '/admin/users', label: 'User Management', icon: '👥', desc: 'Manage user accounts and roles' },
-            { href: '/admin/promotions', label: 'Promotions', icon: '🎁', desc: 'Create and manage promotions' },
-            { href: '/admin/draws', label: 'Draw Declaration', icon: '🎲', desc: 'Declare lottery draw results' },
-          ].map((action) => (
-            <a
-              key={action.href}
-              href={action.href}
-              className="flex items-center justify-between p-4 bg-background border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{action.icon}</span>
-                <div>
-                  <div className="font-medium text-foreground text-sm">{action.label}</div>
-                  <div className="text-xs text-muted-foreground">{action.desc}</div>
+      {/* Main content grid: Quick Actions + Quick Credit */}
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Quick Actions */}
+        <div className="lg:col-span-2 bg-card border border-border rounded-2xl p-6">
+          <h2 className="text-lg font-bold text-foreground mb-4">Quick Actions</h2>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {[
+              { href: '/admin/lotteries', label: 'Manage Lotteries', icon: '🎰', desc: 'Create and manage lottery pools' },
+              { href: '/admin/balance-requests', label: 'Balance Requests', icon: '💰', desc: 'Approve or reject top-up requests' },
+              { href: '/admin/withdrawals', label: 'Withdrawals', icon: '💸', desc: 'Process withdrawal requests' },
+              { href: '/admin/users', label: 'User Management', icon: '👥', desc: 'Manage user accounts and roles' },
+              { href: '/admin/promotions', label: 'Promotions', icon: '🎁', desc: 'Create and manage promotions' },
+              { href: '/admin/draws', label: 'Draw Declaration', icon: '🎲', desc: 'Declare lottery draw results' },
+            ].map((action) => (
+              <a
+                key={action.href}
+                href={action.href}
+                className="flex items-center justify-between p-4 bg-background border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{action.icon}</span>
+                  <div>
+                    <div className="font-medium text-foreground text-sm">{action.label}</div>
+                    <div className="text-xs text-muted-foreground">{action.desc}</div>
+                  </div>
                 </div>
-              </div>
-              <ArrowRight size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
-            </a>
-          ))}
+                <ArrowRight size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
+              </a>
+            ))}
+          </div>
+        </div>
+
+        {/* Quick Credit Coins */}
+        <div className="lg:col-span-1">
+          <QuickCreditCoinsCard />
         </div>
       </div>
     </div>

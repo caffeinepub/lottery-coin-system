@@ -69,7 +69,8 @@ export default function EditPromotionDialog({ open, onClose, promotion }: EditPr
     };
 
     try {
-      await updatePromotion.mutateAsync({ id: promotion.id, data });
+      // Fix: use promotionId (not id) to match the hook's expected parameter shape
+      await updatePromotion.mutateAsync({ promotionId: promotion.id, data });
       toast.success('Promotion updated successfully!');
       onClose();
     } catch (err: any) {
@@ -141,10 +142,19 @@ export default function EditPromotionDialog({ open, onClose, promotion }: EditPr
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={updatePromotion.isPending} className="border-border text-foreground">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={updatePromotion.isPending}
+            className="border-border text-foreground"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={updatePromotion.isPending} className="bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button
+            onClick={handleSubmit}
+            disabled={updatePromotion.isPending}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
             {updatePromotion.isPending ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>
             ) : (

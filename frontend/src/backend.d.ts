@@ -25,9 +25,19 @@ export enum UserRole {
     user = "user",
     guest = "guest"
 }
+export enum Variant_notFound_unauthorized {
+    notFound = "notFound",
+    unauthorized = "unauthorized"
+}
 export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    getCallerUserProfile(): Promise<UserProfile | null>;
+    getCallerUserProfile(): Promise<{
+        __kind__: "ok";
+        ok: UserProfile;
+    } | {
+        __kind__: "err";
+        err: Variant_notFound_unauthorized;
+    }>;
     getCallerUserRole(): Promise<UserRole>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;

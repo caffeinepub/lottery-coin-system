@@ -10,6 +10,7 @@ interface AuthContextValue {
   userProfile: UserProfile | null;
   isFetched: boolean;
   showProfileSetup: boolean;
+  profileError: string | null;
   completeProfileSetup: () => void;
   refetchProfile: () => Promise<void>;
 }
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextValue>({
   userProfile: null,
   isFetched: false,
   showProfileSetup: false,
+  profileError: null,
   completeProfileSetup: () => {},
   refetchProfile: async () => {},
 });
@@ -37,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileFetched, setProfileFetched] = useState(false);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   const isAuthenticated = !!identity;
   const isLoading = isInitializing || actorFetching || (isAuthenticated && profileLoading && !profileFetched);
@@ -45,22 +48,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!actor || !identity) {
       setUserProfile(null);
       setProfileFetched(false);
+      setShowProfileSetup(false);
+      setProfileError(null);
       return;
     }
     setProfileLoading(true);
+    setProfileError(null);
     try {
-      const profile = await actor.getCallerUserProfile();
-      setUserProfile(profile);
-      setProfileFetched(true);
-      if (profile === null) {
+      const result = await actor.getCallerUserProfile();
+
+      // Handle Result type: { __kind__: "ok", ok: UserProfile } | { __kind__: "err", err: ... }
+      if (result && typeof result === 'object' && '__kind__' in result) {
+        if (result.__kind__ === 'ok') {
+          setUserProfile((result as any).ok);
+          setShowProfileSetup(false);
+          setProfileFetched(true);
+        } else if (result.__kind__ === 'err') {
+          const err = (result as any).err;
+          if (err === 'notFound' || err === '#notFound' || err?.notFound !== undefined || err === 0) {
+            // No profile yet — show setup modal
+            setUserProfile(null);
+            setShowProfileSetup(true);
+            setProfileFetched(true);
+          } else {
+            // Unauthorized or other error
+            setUserProfile(null);
+            setShowProfileSetup(false);
+            setProfileError('Unauthorized access. Please log in again.');
+            setProfileFetched(true);
+          }
+        }
+      } else if (result === null || result === undefined) {
+        // Fallback: treat null as not found
+        setUserProfile(null);
         setShowProfileSetup(true);
+        setProfileFetched(true);
       } else {
+        // Fallback: treat as direct UserProfile object (legacy)
+        setUserProfile(result as unknown as UserProfile);
         setShowProfileSetup(false);
+        setProfileFetched(true);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch user profile:', err);
       setUserProfile(null);
       setProfileFetched(true);
+      // Check if it's a "not found" trap from the backend
+      const msg = err?.message || '';
+      if (msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('notfound')) {
+        setShowProfileSetup(true);
+      } else {
+        setProfileError('Failed to load profile. Please try again.');
+      }
     } finally {
       setProfileLoading(false);
     }
@@ -73,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserProfile(null);
       setProfileFetched(false);
       setShowProfileSetup(false);
+      setProfileError(null);
     }
   }, [actor, identity, actorFetching]);
 
@@ -95,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userProfile,
         isFetched: profileFetched,
         showProfileSetup,
+        profileError,
         completeProfileSetup,
         refetchProfile,
       }}

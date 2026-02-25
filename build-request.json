@@ -1,154 +1,39 @@
 {
   "kind": "build_request",
-  "title": "Fix blank screen rendering — full frontend visibility audit and repair",
-  "projectName": "LottoCoin",
-  "priority": "high",
+  "title": "Add Admin Panel control link to Navbar",
+  "projectName": "LuckyCoins",
+  "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-37",
-      "text": "Audit and fix the root App.tsx router configuration to ensure all user-facing routes (/, /login, /register, /dashboard, /lotteries, /lotteries/:id/buy, /my-tickets, /add-balance, /withdraw, /transactions, /results/:lotteryId) and all admin routes (/admin, /admin/dashboard, /admin/balance-requests, /admin/withdrawals, /admin/lotteries, /admin/users, /admin/promotions, /admin/draw) are correctly registered with TanStack Router and render their respective page components without blank screens or routing errors. Verify that route definitions reference the correct imported page components and that no route is missing a component assignment.",
+      "id": "REQ-49",
+      "text": "Ensure the Navbar component displays a clearly visible 'Admin Panel' link/button for authenticated admin users. The link must navigate to /admin/dashboard and be styled consistently with the gold-and-dark theme (gold accent color, hover highlight). It must appear in the main Navbar on every page when the logged-in user has role=admin, and must not be visible to non-admin users.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-6"
         ],
         "quotes": [
-          "The entire website and its admin panel are not visible."
+          "Admin panel control link"
         ]
       },
       "acceptanceCriteria": [
-        "Navigating to / renders the Landing page without a blank screen.",
-        "Navigating to /login renders the Login page.",
-        "Navigating to /dashboard renders the UserDashboard page for authenticated users.",
-        "All admin routes under /admin/* render their respective admin page components.",
-        "No route results in a blank white screen or an unhandled route error."
-      ]
-    },
-    {
-      "id": "REQ-38",
-      "text": "Audit and fix the AuthContext so that after Internet Identity login the user profile is correctly fetched from the backend actor and stored in context state, transitioning the UI from unauthenticated to authenticated view. Ensure that unauthenticated users accessing protected routes are redirected to /login, and that admin users can access /admin/* routes. Confirm that the InternetIdentityProvider and AuthContext provider are correctly nested in main.tsx and App.tsx so that context values are available throughout the component tree.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-4"
-        ],
-        "quotes": [
-          "The entire website and its admin panel are not visible."
-        ]
-      },
-      "acceptanceCriteria": [
-        "After Internet Identity login, the user's display name and coin balance appear in the Navbar within 3 seconds.",
-        "Unauthenticated navigation to /dashboard redirects to /login.",
-        "Authenticated admin navigation to /admin/dashboard renders the Admin Dashboard without redirect.",
-        "AuthContext loading state prevents a flash of unauthenticated UI on page reload."
-      ]
-    },
-    {
-      "id": "REQ-39",
-      "text": "Audit and fix the Navbar component to correctly render on every page. The Navbar must be mounted at the application root level (App.tsx layout). For authenticated users it must show the app logo, coin balance, user display name, and a logout button. For admin users it must additionally show an 'Admin Panel' navigation link. For unauthenticated users it must show only the logo and a Login button. Fix any issue causing the Navbar to be absent or invisible (e.g. incorrect z-index, missing layout wrapper, context not available at mount time).",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-4"
-        ],
-        "quotes": [
-          "The entire website and its admin panel are not visible."
-        ]
-      },
-      "acceptanceCriteria": [
-        "The Navbar is visible on every page including the Landing page.",
-        "Authenticated users see their coin balance and display name in the Navbar.",
-        "Unauthenticated users see only the logo and a Login button.",
-        "Admin users see an 'Admin Panel' link in the Navbar."
-      ]
-    },
-    {
-      "id": "REQ-40",
-      "text": "Audit and fix the Admin panel layout so that all admin sub-pages (Dashboard, Balance Requests, Withdrawal Management, Lottery Management, User Management, Promotions, Draw Declaration) are accessible via sidebar navigation links and render their content correctly. Ensure a shared admin layout wrapper component is applied to all /admin/* routes and that sidebar links correctly navigate between admin pages without blank screens.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-4"
-        ],
-        "quotes": [
-          "The entire website and its admin panel are not visible."
-        ]
-      },
-      "acceptanceCriteria": [
-        "Clicking each sidebar link in the admin panel navigates to the correct admin sub-page.",
-        "All admin sub-pages render their content (tables, forms, stats) without a blank screen.",
-        "The admin sidebar is visible on all /admin/* routes.",
-        "Non-admin users attempting to access /admin/* are redirected to /dashboard."
-      ]
-    },
-    {
-      "id": "REQ-41",
-      "text": "Audit and fix the useActor hook and all React Query hooks in useQueries.ts to ensure the backend actor is correctly initialised after Internet Identity login and is passed to all query and mutation functions. Fix any case where actor is null or undefined at the time of a query execution, which causes API calls to silently fail and pages to render empty. Add null-guards so that queries dependent on the actor are disabled (enabled: false) until the actor is available, and display a loading state rather than a blank page while the actor initialises.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-4"
-        ],
-        "quotes": [
-          "The entire website and its admin panel are not visible."
-        ]
-      },
-      "acceptanceCriteria": [
-        "No page renders blank due to actor being null during the initial load.",
-        "All useQuery hooks that depend on the actor have enabled: !!actor guards.",
-        "A loading spinner or skeleton is shown while the actor is initialising.",
-        "After actor is ready, queries execute and their data renders on the page."
-      ]
-    },
-    {
-      "id": "REQ-42",
-      "text": "Audit and fix React Query (TanStack Query) configuration in the application. Ensure QueryClientProvider is correctly mounted at the app root in main.tsx wrapping the entire application. Add error boundaries or per-query error fallback UI so that a failed backend call displays a visible error message instead of a blank page. Ensure no query throws an unhandled error that crashes the React tree and produces a white screen.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-4"
-        ],
-        "quotes": [
-          "The entire website and its admin panel are not visible."
-        ]
-      },
-      "acceptanceCriteria": [
-        "QueryClientProvider wraps the entire app at the root level.",
-        "A failed query displays an error message UI rather than a blank page.",
-        "No unhandled query error causes a full white-screen crash.",
-        "The QueryClient is configured with retry: 1 and a staleTime appropriate for the app."
-      ]
-    },
-    {
-      "id": "REQ-43",
-      "text": "Audit and fix the global CSS and Tailwind configuration to ensure all page content is visible. Verify that index.css and tailwind.config.js correctly define the dark gold theme CSS custom properties and that the body background and text colors are applied so that page content is not hidden (e.g. white text on white background or black text on black background). Ensure the root div in index.html has the correct class or style so the app fills the viewport and is visible.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-4"
-        ],
-        "quotes": [
-          "The entire website and its admin panel are not visible."
-        ]
-      },
-      "acceptanceCriteria": [
-        "The app body has the deep charcoal background (#1a1a2e or equivalent) applied.",
-        "Body text is cream/white and visible against the dark background.",
-        "No page section is invisible due to matching foreground and background colors.",
-        "The root div fills the full viewport height and width."
+        "When logged in as an admin user, the Navbar shows an 'Admin Panel' link.",
+        "The 'Admin Panel' link navigates to /admin/dashboard.",
+        "The link is styled with gold/amber accent color consistent with the existing theme.",
+        "Non-admin authenticated users do not see the 'Admin Panel' link.",
+        "Unauthenticated users do not see the 'Admin Panel' link.",
+        "The link is visible on every page (Navbar mounted at root layout level)."
       ]
     }
   ],
   "constraints": [
-    "Do not modify files listed in frontend.immutablePaths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui.",
-    "All Motoko logic must remain in the single backend/main.mo actor; do not create new backend files unless migration is required.",
-    "Preserve the existing gold-and-dark visual theme throughout all fixes."
+    "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui.",
+    "Do not change backend logic or data models."
   ],
   "nonGoals": [
-    "Adding new features or pages not already specified.",
-    "Changing backend data models or API endpoints.",
-    "Modifying the Internet Identity authentication flow beyond fixing context wiring.",
-    "Redesigning the visual theme or layout structure."
+    "Adding new admin pages or routes.",
+    "Changing any admin page content.",
+    "Modifying authentication or authorization logic beyond the Navbar display."
   ],
   "imageRequirements": {
     "required": [],

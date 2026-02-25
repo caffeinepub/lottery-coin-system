@@ -1,25 +1,40 @@
 import React, { useState } from 'react';
-import { useListAllUsers, useBlockUser, useUnblockUser, useAssignUserRole, useAdminCreditUser } from '@/hooks/useQueries';
+import { useListAllUsers, useBlockUser, useUnblockUser, useAssignUserRole } from '@/hooks/useQueries';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Users, Search, Shield, Ban, CheckCircle, Coins } from 'lucide-react';
-import { Principal } from '@dfinity/principal';
+import CreditCoinsModal from '@/components/CreditCoinsModal';
+
+interface UserRow {
+  id: string;
+  name: string;
+  email: string;
+  coinsBalance: bigint;
+  role: string;
+  isBlocked: boolean;
+}
 
 export default function UserManagement() {
   const { data: users, isLoading, error } = useListAllUsers();
   const blockMutation = useBlockUser();
   const unblockMutation = useUnblockUser();
   const roleMutation = useAssignUserRole();
-  const creditMutation = useAdminCreditUser();
-  const [search, setSearch] = useState('');
-  const [creditAmounts, setCreditAmounts] = useState<Record<string, string>>({});
 
-  const filtered = users?.filter((u) =>
+  const [search, setSearch] = useState('');
+  const [creditModalOpen, setCreditModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
+
+  const filtered = (users as UserRow[] | undefined)?.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase()) ||
     u.id.toLowerCase().includes(search.toLowerCase())
   ) || [];
+
+  const handleOpenCreditModal = (user: UserRow) => {
+    setSelectedUser(user);
+    setCreditModalOpen(true);
+  };
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -73,42 +88,31 @@ export default function UserManagement() {
                   </div>
                   <div className="text-xs text-muted-foreground flex flex-wrap gap-3">
                     <span>{user.email || 'No email'}</span>
-                    <span className="flex items-center gap-1"><Coins size={10} /> {Number(user.coinsBalance).toLocaleString()} coins</span>
+                    <span className="flex items-center gap-1">
+                      <Coins size={10} className="text-amber-500" />
+                      <span className="text-amber-500 font-medium">{Number(user.coinsBalance).toLocaleString()} coins</span>
+                    </span>
                     <span className="font-mono">{user.id.slice(0, 20)}...</span>
                   </div>
                 </div>
+
                 <div className="flex flex-wrap gap-2 items-center">
-                  {/* Credit */}
-                  <div className="flex gap-1">
-                    <Input
-                      type="number"
-                      placeholder="Amount"
-                      value={creditAmounts[user.id] || ''}
-                      onChange={(e) => setCreditAmounts((p) => ({ ...p, [user.id]: e.target.value }))}
-                      className="w-20 h-7 text-xs bg-background border-border text-foreground"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        const amount = parseInt(creditAmounts[user.id] || '0');
-                        if (amount > 0) {
-                          creditMutation.mutate({ userId: Principal.fromText(user.id), amount, description: 'Admin credit' });
-                          setCreditAmounts((p) => ({ ...p, [user.id]: '' }));
-                        }
-                      }}
-                      disabled={creditMutation.isPending}
-                      className="h-7 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
-                    >
-                      <Coins size={10} className="mr-1" />
-                      Credit
-                    </Button>
-                  </div>
+                  {/* Add Coins Button */}
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCreditModal(user)}
+                    className="h-7 text-xs bg-amber-500 hover:bg-amber-600 text-white font-medium"
+                  >
+                    <Coins size={10} className="mr-1" />
+                    Add Coins
+                  </Button>
+
                   {/* Role Toggle */}
                   {user.role !== 'admin' ? (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => roleMutation.mutate({ userId: Principal.fromText(user.id), role: 'admin' })}
+                      onClick={() => roleMutation.mutate({ userId: user.id, role: 'admin' })}
                       disabled={roleMutation.isPending}
                       className="h-7 text-xs border-primary/50 text-primary hover:bg-primary/10"
                     >
@@ -119,19 +123,20 @@ export default function UserManagement() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => roleMutation.mutate({ userId: Principal.fromText(user.id), role: 'user' })}
+                      onClick={() => roleMutation.mutate({ userId: user.id, role: 'user' })}
                       disabled={roleMutation.isPending}
                       className="h-7 text-xs border-border text-muted-foreground hover:bg-accent"
                     >
                       Remove Admin
                     </Button>
                   )}
+
                   {/* Block/Unblock */}
                   {user.isBlocked ? (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => unblockMutation.mutate({ userId: Principal.fromText(user.id) })}
+                      onClick={() => unblockMutation.mutate({ userId: user.id })}
                       disabled={unblockMutation.isPending}
                       className="h-7 text-xs border-green-500/50 text-green-400 hover:bg-green-500/10"
                     >
@@ -142,7 +147,7 @@ export default function UserManagement() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => blockMutation.mutate({ userId: Principal.fromText(user.id) })}
+                      onClick={() => blockMutation.mutate({ userId: user.id })}
                       disabled={blockMutation.isPending}
                       className="h-7 text-xs border-red-500/50 text-red-400 hover:bg-red-500/10"
                     >
@@ -156,6 +161,13 @@ export default function UserManagement() {
           ))}
         </div>
       )}
+
+      {/* Credit Coins Modal */}
+      <CreditCoinsModal
+        open={creditModalOpen}
+        onOpenChange={setCreditModalOpen}
+        user={selectedUser}
+      />
     </div>
   );
 }

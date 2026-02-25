@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { useListActiveLotteryPools, useGetDrawResult, useDeclareDraw, type WinnerRecord } from '../../hooks/useQueries';
+// Fix: renamed useDeclareDraw → useDeclareWinner to match the hook export
+import { useListActiveLotteryPools, useGetDrawResult, useDeclareWinner, type WinnerRecord } from '../../hooks/useQueries';
 import { formatCoins } from '../../lib/utils';
 
 function getRankStyle(rank: number) {
@@ -35,7 +36,8 @@ function getRankLabel(rank: number) {
 
 export default function DrawDeclaration() {
   const { data: lotteries, isLoading: lotteriesLoading } = useListActiveLotteryPools();
-  const declareDraw = useDeclareDraw();
+  // Fix: use useDeclareWinner (correct hook name)
+  const declareDraw = useDeclareWinner();
 
   const [selectedLotteryId, setSelectedLotteryId] = useState('');
   const [winningNumber, setWinningNumber] = useState('');

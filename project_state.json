@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 11,
+  "projectStateVersion": 17,
   "summary": "Full-stack lottery coin system with React.js frontend, Node.js + Express backend, and MySQL database. Features include email OTP authentication, coin-based wallet, balance addition with admin approval, lottery ticket purchasing (6-digit hourly, 9-digit daily, 12-digit weekly jackpot draws with massive prize pools, plus 1h/3h/5h/12h timed draws), dynamic prize pools (fixed ticket price, fixed max tickets, max 50 tickets per user, draw on time even if not full, admin can create pools), live tracking of tickets sold/remaining/total pool, 90% revenue distribution to winners (minimum 70% win, tiered prizes for 1st/2nd/3rd), full result transparency, automated draw results with winner crediting, withdrawal system with admin approval, bonus/promotional system (admin bonus coins, first-user 90% discount, referral bonuses, limited-time discounts, cashback, loyalty rewards, festival campaigns), and a complete admin panel with user management (block/unblock, action logs).",
   "architectural_notes": [
     "Backend: Node.js + Express + MySQL with bcrypt, JWT, multer for file uploads, rate limiting, and CORS",
@@ -15,7 +15,8 @@
     "Bonus/promo system: admin_bonus, first_user_discount, referral_bonus, cashback, loyalty_reward, festival_campaign transaction types added to wallet; promo eligibility checks on ticket purchase"
   ],
   "known_issues": [
-    "Website and admin panel not rendering/displaying correctly after Version 3 deployment"
+    "Website and admin panel not rendering/displaying correctly after Version 3 deployment",
+    "'User Record Not Found' error appears on dashboard profile setup page after clicking 'Get Started' — user profile not being created/fetched correctly after authentication"
   ],
   "isFixRequest": true,
   "existing_features": [
@@ -184,6 +185,46 @@
       "title": "Audit and fix React Query (TanStack Query) configuration in the application. Ensure QueryClientProvider is correctly mounted at the app root in main.tsx wrapping the entire application. Add error boundaries or per-query error fallback UI so that a failed backend call displays a visible error message instead of a blank page. Ensure no query throws an unhandled error that crashes the React tree and produces a white screen.",
       "reqIds": [
         "REQ-42"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-profilesetupmodal-so-that-when-a-new-user-submits-their-display-name-and-email-and-clicks-get-started-the-backend-createuserprofile-or-equivalent-call-succeeds-and-the-resulting-user-profile-is-stored-in-authcontext-state-dismissing-the-modal-and-navigating-the-user-to-the-dashboard-the-error-user-record-not-found-must-no-longer-appear-after-a-successful-profile-creation-submission",
+      "title": "Fix the ProfileSetupModal so that when a new user submits their display name and email and clicks 'Get Started', the backend `createUserProfile` (or equivalent) call succeeds and the resulting user profile is stored in AuthContext state, dismissing the modal and navigating the user to the dashboard. The error 'User Record Not Found' must no longer appear after a successful profile creation submission.",
+      "reqIds": [
+        "REQ-44"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-audit-and-fix-the-authcontext-fetchuserprofile-logic-to-correctly-handle-the-case-where-a-user-has-authenticated-via-internet-identity-but-does-not-yet-have-a-profile-record-in-the-backend-the-context-must-distinguish-between-a-a-user-who-is-authenticated-but-has-no-profile-yet-show-profilesetupmodal-and-b-a-user-whose-profile-fetch-fails-due-to-a-real-error-show-an-error-state-after-the-profilesetupmodal-completes-profile-creation-immediately-re-fetch-the-profile-and-update-context-state-so-the-app-reflects-the-authenticated-profiled-state",
+      "title": "Audit and fix the AuthContext `fetchUserProfile` logic to correctly handle the case where a user has authenticated via Internet Identity but does not yet have a profile record in the backend. The context must distinguish between (a) a user who is authenticated but has no profile yet (show ProfileSetupModal) and (b) a user whose profile fetch fails due to a real error (show an error state). After the ProfileSetupModal completes profile creation, immediately re-fetch the profile and update context state so the app reflects the authenticated+profiled state.",
+      "reqIds": [
+        "REQ-45"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-on-the-admin-user-management-page-admin-users-add-a-add-coins-action-button-in-each-user-row-that-opens-a-modal-dialog-the-modal-must-include-a-coin-amount-input-field-numeric-minimum-1-an-optional-description-reason-text-field-and-a-credit-coins-submit-button-on-submission-call-the-existing-grantadminbonus-backend-function-to-credit-the-specified-number-of-coins-to-that-user-s-wallet-and-log-the-transaction-as-type-adminbonus-on-success-show-a-toast-notification-and-refresh-the-user-table-to-reflect-the-updated-coin-balance-on-failure-show-an-error-toast",
+      "title": "On the Admin User Management page (/admin/users), add a 'Add Coins' action button in each user row that opens a modal dialog. The modal must include a coin amount input field (numeric, minimum 1), an optional description/reason text field, and a 'Credit Coins' submit button. On submission, call the existing `grantAdminBonus` backend function to credit the specified number of coins to that user's wallet and log the transaction as type #adminBonus. On success, show a toast notification and refresh the user table to reflect the updated coin balance. On failure, show an error toast.",
+      "reqIds": [
+        "REQ-47"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-on-the-admin-dashboard-page-admin-dashboard-add-a-clearly-visible-quick-credit-coins-card-or-widget-in-the-quick-actions-grid-this-widget-must-allow-the-admin-to-search-for-a-user-by-name-or-email-enter-a-coin-amount-and-submit-to-call-grantadminbonus-this-provides-a-fast-path-to-credit-coins-without-navigating-to-the-full-user-management-page-after-a-successful-credit-show-a-success-toast-and-clear-the-form",
+      "title": "On the Admin Dashboard page (/admin/dashboard), add a clearly visible 'Quick Credit Coins' card or widget in the quick-actions grid. This widget must allow the admin to search for a user by name or email, enter a coin amount, and submit to call `grantAdminBonus`. This provides a fast path to credit coins without navigating to the full User Management page. After a successful credit, show a success toast and clear the form.",
+      "reqIds": [
+        "REQ-48"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-navbar-component-displays-a-clearly-visible-admin-panel-link-button-for-authenticated-admin-users-the-link-must-navigate-to-admin-dashboard-and-be-styled-consistently-with-the-gold-and-dark-theme-gold-accent-color-hover-highlight-it-must-appear-in-the-main-navbar-on-every-page-when-the-logged-in-user-has-role-admin-and-must-not-be-visible-to-non-admin-users",
+      "title": "Ensure the Navbar component displays a clearly visible 'Admin Panel' link/button for authenticated admin users. The link must navigate to /admin/dashboard and be styled consistently with the gold-and-dark theme (gold accent color, hover highlight). It must appear in the main Navbar on every page when the logged-in user has role=admin, and must not be visible to non-admin users.",
+      "reqIds": [
+        "REQ-49"
       ],
       "version": 1
     }
@@ -452,6 +493,14 @@
       "summary": "Audit and fix the global CSS and Tailwind configuration to ensure all page content is visible. Verify that index.css and tailwind.config.js correctly define the dark gold theme CSS custom properties and that the body background and text colors are applied so that page content is not hidden (e.g. white text on white background or black text on black background). Ensure the root div in index.html has the correct class or style so the app fills the viewport and is visible.",
       "reqIds": [
         "REQ-43"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-50",
+      "summary": "Audit and fix the backend `getMyProfile` (or equivalent endpoint used by AuthContext to fetch the current user's profile) to ensure it correctly looks up the caller's profile by their Internet Identity principal. If no profile exists for the principal, return a clearly distinguishable 'not found' variant (e.g. `#err(#notFound)`) rather than a generic error, so the frontend can show the profile setup flow instead of an error message.",
+      "reqIds": [
+        "REQ-46"
       ],
       "status": "pending"
     }

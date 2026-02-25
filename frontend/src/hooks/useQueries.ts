@@ -1,135 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useActor } from './useActor';
+import { useActor } from '@/hooks/useActor';
+import type {
+  UserProfile,
+  Variant_notFound_unauthorized,
+} from '@/backend';
 
-// ===== TYPES (local, matching backend) =====
-
-export interface LotteryPool {
-  id: string;
-  name: string;
-  lotteryType: any;
-  drawInterval: any;
-  ticketPrice: bigint;
-  maxTickets: bigint;
-  ticketsPerUserMax: bigint;
-  drawTime: bigint;
-  status: any;
-  totalTicketsSold: bigint;
-  totalPoolAmount: bigint;
-  description: string;
-  logo: [] | [any];
-  firstPrizeRatio: bigint;
-  secondPrizeRatio: bigint;
-  thirdPrizeRatio: bigint;
-  createdAt: bigint;
-}
-
-export interface Ticket {
-  id: string;
-  userId: any;
-  lotteryPoolId: string;
-  ticketNumber: bigint;
-  purchaseTime: bigint;
-  isWinner: boolean;
-  prizeAmount: bigint;
-}
-
-export interface WalletTransaction {
-  id: string;
-  userId: any;
-  transactionType: any;
-  amount: bigint;
-  lotteryPoolId: [] | [string];
-  ticketId: [] | [string];
-  description: string;
-  createdAt: bigint;
-}
-
-export interface BalanceRequest {
-  id: string;
-  userId: any;
-  amount: bigint;
-  paymentScreenshotUrl: string;
-  status: any;
-  adminNotes: [] | [string];
-  createdAt: bigint;
-  updatedAt: bigint;
-}
-
-export interface Withdrawal {
-  id: string;
-  userId: any;
-  amount: bigint;
-  upiId: [] | [string];
-  bankDetails: [] | [string];
-  status: any;
-  adminNotes: [] | [string];
-  createdAt: bigint;
-  updatedAt: bigint;
-}
-
-export interface WinnerRecord {
+// Re-export WinnerRecord type for use in other components
+export type WinnerRecord = {
   username: string;
   rank: bigint;
   ticketNumber: bigint;
   prizeAmount: bigint;
-}
-
-export interface DrawResult {
-  winningNumber: bigint;
-  totalTickets: bigint;
-  totalPrizeDistributed: bigint;
-  drawTime: bigint;
-  winners: WinnerRecord[];
-}
-
-export interface LotteryLiveStats {
-  ticketsSold: bigint;
-  remainingTickets: bigint;
-  totalPoolAmount: bigint;
-  drawTime: bigint;
-  currentStatus: any;
-}
-
-export interface DashboardStats {
-  totalRevenue: bigint;
-  totalActiveUsers: bigint;
-  activeLotteryPoolsCount: bigint;
-  pendingApprovalsCount: bigint;
-}
-
-export interface Promotion {
-  id: string;
-  promoType: any;
-  description: string;
-  discountPercent: [] | [bigint];
-  bonusAmount: [] | [bigint];
-  startTime: bigint;
-  endTime: [] | [bigint];
-  isActive: boolean;
-  createdBy: any;
-}
-
-export interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  coinsBalance: bigint;
-  createdAt: bigint;
-  role: string;
-  isVerified: boolean;
-  isBlocked: boolean;
-  blockedAt?: bigint;
-  referralCode: string;
-}
-
-export interface AdminActionLog {
-  id: string;
-  adminPrincipal: any;
-  targetUserId: any;
-  action: any;
-  reason: [] | [string];
-  timestamp: bigint;
-}
+};
 
 // ===== USER PROFILE =====
 
@@ -140,11 +22,21 @@ export function useGetCallerUserProfile() {
     queryKey: ['currentUserProfile'],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      return actor.getCallerUserProfile() as Promise<UserProfile | null>;
+      const result = await actor.getCallerUserProfile();
+
+      if (result && typeof result === 'object' && '__kind__' in result) {
+        if (result.__kind__ === 'ok') {
+          return (result as any).ok as UserProfile;
+        } else {
+          // #notFound or #unauthorized — return null to indicate no profile
+          return null;
+        }
+      }
+      // Fallback
+      return null;
     },
     enabled: !!actor && !actorFetching,
-    retry: 1,
-    staleTime: 30_000,
+    retry: false,
   });
 
   return {
@@ -154,148 +46,143 @@ export function useGetCallerUserProfile() {
   };
 }
 
+export function useSaveCallerUserProfile() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (profile: UserProfile) => {
+      if (!actor) throw new Error('Actor not available');
+      await actor.saveCallerUserProfile(profile);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+  });
+}
+
 // ===== LOTTERY POOLS =====
 
 export function useListActiveLotteryPools() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<LotteryPool[]>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any[]>({
     queryKey: ['activeLotteryPools'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        const result = await (actor as any).listActiveLotteryPools();
-        return result || [];
-      } catch {
-        return [];
-      }
+      return (actor as any).listActiveLotteryPools();
     },
-    enabled: !!actor && !actorFetching,
-    retry: 1,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching,
   });
 }
 
 export function useListAllLotteryPools() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<LotteryPool[]>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any[]>({
     queryKey: ['allLotteryPools'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        const result = await (actor as any).listAllLotteryPools();
-        return result || [];
-      } catch {
-        return [];
-      }
+      return (actor as any).listAllLotteryPools();
     },
-    enabled: !!actor && !actorFetching,
-    retry: 1,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching,
   });
 }
 
 export function useGetLotteryPool(poolId: string) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<LotteryPool | null>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any>({
     queryKey: ['lotteryPool', poolId],
     queryFn: async () => {
       if (!actor) return null;
-      try {
-        const result = await (actor as any).getLotteryPool(poolId);
-        return result?.[0] ?? null;
-      } catch {
-        return null;
-      }
+      return (actor as any).getLotteryPool(poolId);
     },
-    enabled: !!actor && !actorFetching && !!poolId,
-    retry: 1,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching && !!poolId,
   });
 }
 
 export function useGetLotteryLiveStats(poolId: string) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<LotteryLiveStats | null>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any>({
     queryKey: ['lotteryLiveStats', poolId],
     queryFn: async () => {
       if (!actor) return null;
-      try {
-        const result = await (actor as any).getLotteryLiveStats(poolId);
-        return result?.[0] ?? null;
-      } catch {
-        return null;
-      }
+      return (actor as any).getLotteryLiveStats(poolId);
     },
-    enabled: !!actor && !actorFetching && !!poolId,
-    retry: 1,
-    refetchInterval: 30_000,
+    enabled: !!actor && !isFetching && !!poolId,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useCreateLotteryPool() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: any) => {
+      if (!actor) throw new Error('Actor not available');
+      return (actor as any).createLotteryPool(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activeLotteryPools'] });
+      queryClient.invalidateQueries({ queryKey: ['allLotteryPools'] });
+    },
+  });
+}
+
+export function useUpdateLotteryPool() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ poolId, data }: { poolId: string; data: any }) => {
+      if (!actor) throw new Error('Actor not available');
+      return (actor as any).updateLotteryPool(poolId, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activeLotteryPools'] });
+      queryClient.invalidateQueries({ queryKey: ['allLotteryPools'] });
+    },
   });
 }
 
 // ===== TICKETS =====
 
 export function useListMyTickets() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Ticket[]>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any[]>({
     queryKey: ['myTickets'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        const result = await (actor as any).listMyTickets();
-        return result || [];
-      } catch {
-        return [];
-      }
+      return (actor as any).listMyTickets();
     },
-    enabled: !!actor && !actorFetching,
-    retry: 1,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching,
   });
 }
 
 export function useListTicketsForPool(poolId: string) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Ticket[]>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any[]>({
     queryKey: ['ticketsForPool', poolId],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        const result = await (actor as any).listMyTicketsForPool(poolId);
-        return result || [];
-      } catch {
-        return [];
-      }
+      return (actor as any).listTicketsForPool(poolId);
     },
-    enabled: !!actor && !actorFetching && !!poolId,
-    retry: 1,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching && !!poolId,
   });
 }
 
-// Alias for backward compatibility
+// Alias
 export const useListTicketsForLottery = useListTicketsForPool;
 
 export function useBuyTicket() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async ({ poolId, ticketNumber }: { poolId: string; ticketNumber: number }) => {
+    mutationFn: async ({ poolId, ticketNumber, promotionId }: { poolId: string; ticketNumber: number; promotionId?: string }) => {
       if (!actor) throw new Error('Actor not available');
-      return (actor as any).buyTicket(poolId, BigInt(ticketNumber));
+      return (actor as any).buyTicket(poolId, ticketNumber, promotionId ? [promotionId] : []);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myTickets'] });
       queryClient.invalidateQueries({ queryKey: ['activeLotteryPools'] });
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
-      queryClient.invalidateQueries({ queryKey: ['lotteryLiveStats'] });
-      queryClient.invalidateQueries({ queryKey: ['ticketsForPool'] });
     },
   });
 }
@@ -303,22 +190,14 @@ export function useBuyTicket() {
 // ===== TRANSACTIONS =====
 
 export function useListMyTransactions() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<WalletTransaction[]>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any[]>({
     queryKey: ['myTransactions'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        const result = await (actor as any).listMyTransactions();
-        return result || [];
-      } catch {
-        return [];
-      }
+      return (actor as any).listMyTransactions();
     },
-    enabled: !!actor && !actorFetching,
-    retry: 1,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching,
   });
 }
 
@@ -327,66 +206,44 @@ export function useListMyTransactions() {
 export function useSubmitBalanceRequest() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({ amount, paymentScreenshotUrl }: { amount: number; paymentScreenshotUrl: string }) => {
       if (!actor) throw new Error('Actor not available');
-      return (actor as any).submitBalanceRequest(BigInt(amount), paymentScreenshotUrl);
+      return (actor as any).submitBalanceRequest(amount, paymentScreenshotUrl);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myBalanceRequests'] });
-      queryClient.invalidateQueries({ queryKey: ['allBalanceRequests'] });
     },
   });
 }
 
 export function useListMyBalanceRequests() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<BalanceRequest[]>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any[]>({
     queryKey: ['myBalanceRequests'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        const result = await (actor as any).listMyBalanceRequests();
-        return result || [];
-      } catch {
-        return [];
-      }
+      return (actor as any).listMyBalanceRequests();
     },
-    enabled: !!actor && !actorFetching,
-    retry: 1,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching,
   });
 }
 
 export function useListAllBalanceRequests() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<BalanceRequest[]>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any[]>({
     queryKey: ['allBalanceRequests'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        const result = await (actor as any).listAllBalanceRequests();
-        return result || [];
-      } catch {
-        return [];
-      }
+      return (actor as any).listAllBalanceRequests();
     },
-    enabled: !!actor && !actorFetching,
-    retry: 1,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching,
   });
 }
-
-// Alias for backward compat
-export const useListPendingBalanceRequests = useListAllBalanceRequests;
 
 export function useApproveBalanceRequest() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({ requestId, notes }: { requestId: string; notes?: string }) => {
       if (!actor) throw new Error('Actor not available');
@@ -394,7 +251,6 @@ export function useApproveBalanceRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allBalanceRequests'] });
-      queryClient.invalidateQueries({ queryKey: ['myBalanceRequests'] });
     },
   });
 }
@@ -402,7 +258,6 @@ export function useApproveBalanceRequest() {
 export function useRejectBalanceRequest() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({ requestId, notes }: { requestId: string; notes?: string }) => {
       if (!actor) throw new Error('Actor not available');
@@ -410,7 +265,6 @@ export function useRejectBalanceRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allBalanceRequests'] });
-      queryClient.invalidateQueries({ queryKey: ['myBalanceRequests'] });
     },
   });
 }
@@ -420,15 +274,10 @@ export function useRejectBalanceRequest() {
 export function useSubmitWithdrawal() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({ amount, upiId, bankDetails }: { amount: number; upiId?: string; bankDetails?: string }) => {
       if (!actor) throw new Error('Actor not available');
-      return (actor as any).submitWithdrawal(
-        BigInt(amount),
-        upiId ? [upiId] : [],
-        bankDetails ? [bankDetails] : []
-      );
+      return (actor as any).submitWithdrawal(amount, upiId ? [upiId] : [], bankDetails ? [bankDetails] : []);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myWithdrawals'] });
@@ -437,53 +286,36 @@ export function useSubmitWithdrawal() {
   });
 }
 
-// Alias for backward compat
+// Alias for backward compatibility
 export const useRequestWithdrawal = useSubmitWithdrawal;
 
 export function useListMyWithdrawals() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Withdrawal[]>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any[]>({
     queryKey: ['myWithdrawals'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        const result = await (actor as any).listMyWithdrawals();
-        return result || [];
-      } catch {
-        return [];
-      }
+      return (actor as any).listMyWithdrawals();
     },
-    enabled: !!actor && !actorFetching,
-    retry: 1,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching,
   });
 }
 
 export function useListAllWithdrawals() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Withdrawal[]>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any[]>({
     queryKey: ['allWithdrawals'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        const result = await (actor as any).listAllWithdrawals();
-        return result || [];
-      } catch {
-        return [];
-      }
+      return (actor as any).listAllWithdrawals();
     },
-    enabled: !!actor && !actorFetching,
-    retry: 1,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching,
   });
 }
 
 export function useApproveWithdrawal() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({ withdrawalId, notes }: { withdrawalId: string; notes?: string }) => {
       if (!actor) throw new Error('Actor not available');
@@ -498,7 +330,6 @@ export function useApproveWithdrawal() {
 export function useRejectWithdrawal() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({ withdrawalId, notes }: { withdrawalId: string; notes?: string }) => {
       if (!actor) throw new Error('Actor not available');
@@ -510,150 +341,166 @@ export function useRejectWithdrawal() {
   });
 }
 
-// ===== DRAW RESULTS =====
+// ===== DRAWS =====
 
 export function useGetDrawResult(poolId: string) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<DrawResult | null>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any>({
     queryKey: ['drawResult', poolId],
     queryFn: async () => {
       if (!actor) return null;
-      try {
-        const result = await (actor as any).getDrawResult(poolId);
-        return result?.[0] ?? null;
-      } catch {
-        return null;
-      }
+      return (actor as any).getDrawResult(poolId);
     },
-    enabled: !!actor && !actorFetching && !!poolId,
-    retry: 1,
-    staleTime: 60_000,
+    enabled: !!actor && !isFetching && !!poolId,
   });
 }
 
-export function useDeclareDraw() {
+export function useListAllDraws() {
+  const { actor, isFetching } = useActor();
+  return useQuery<any[]>({
+    queryKey: ['allDraws'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return (actor as any).listAllDraws();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useDeclareWinner() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({ poolId, winningNumber }: { poolId: string; winningNumber: number }) => {
       if (!actor) throw new Error('Actor not available');
-      return (actor as any).declareDraw(poolId, BigInt(winningNumber));
+      return (actor as any).declareWinner(poolId, winningNumber);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allDraws'] });
       queryClient.invalidateQueries({ queryKey: ['allLotteryPools'] });
       queryClient.invalidateQueries({ queryKey: ['activeLotteryPools'] });
-      queryClient.invalidateQueries({ queryKey: ['drawResult'] });
     },
   });
 }
 
-// ===== ADMIN STATS =====
+// ===== ADMIN =====
 
 export function useGetDashboardStats() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<DashboardStats | null>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any>({
     queryKey: ['dashboardStats'],
     queryFn: async () => {
       if (!actor) return null;
-      try {
-        const result = await (actor as any).getDashboardStats();
-        return result ?? null;
-      } catch {
-        return null;
-      }
+      return (actor as any).getDashboardStats();
     },
-    enabled: !!actor && !actorFetching,
-    retry: 1,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching,
   });
 }
 
-// ===== LOTTERY MANAGEMENT =====
+export function useListAllUsers() {
+  const { actor, isFetching } = useActor();
+  return useQuery<any[]>({
+    queryKey: ['allUsers'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return (actor as any).listAllUsers();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
 
-export function useCreateLotteryPool() {
+export function useAssignUserRole() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async ({ userId, role }: { userId: any; role: any }) => {
       if (!actor) throw new Error('Actor not available');
-      return (actor as any).createLotteryPool(data);
+      return actor.assignCallerUserRole(userId, role);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allLotteryPools'] });
-      queryClient.invalidateQueries({ queryKey: ['activeLotteryPools'] });
+      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
     },
   });
 }
 
-export function useUpdateLotteryPool() {
+export function useBlockUser() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async ({ poolId, data }: { poolId: string; data: any }) => {
+    mutationFn: async ({ userId, reason }: { userId: string; reason?: string }) => {
       if (!actor) throw new Error('Actor not available');
-      return (actor as any).updateLotteryPool(poolId, data);
+      return (actor as any).blockUser(userId, reason ? [reason] : []);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allLotteryPools'] });
-      queryClient.invalidateQueries({ queryKey: ['activeLotteryPools'] });
+      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
     },
   });
 }
+
+export function useUnblockUser() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, reason }: { userId: string; reason?: string }) => {
+      if (!actor) throw new Error('Actor not available');
+      return (actor as any).unblockUser(userId, reason ? [reason] : []);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
+    },
+  });
+}
+
+export function useAdminCreditUser() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, amount, description }: { userId: string; amount: number; description: string }) => {
+      if (!actor) throw new Error('Actor not available');
+      return (actor as any).grantAdminBonus(userId, BigInt(amount), description);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
+      queryClient.invalidateQueries({ queryKey: ['adminUsersList'] });
+    },
+  });
+}
+
+// Alias — useGrantAdminBonus is the canonical name used by CreditCoinsModal and QuickCreditCoinsCard
+export const useGrantAdminBonus = useAdminCreditUser;
 
 // ===== PROMOTIONS =====
 
 export function useListAllPromotions() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Promotion[]>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any[]>({
     queryKey: ['allPromotions'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        const result = await (actor as any).listAllPromotions();
-        return result || [];
-      } catch {
-        return [];
-      }
+      return (actor as any).listAllPromotions();
     },
-    enabled: !!actor && !actorFetching,
-    retry: 1,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching,
   });
 }
 
-// Alias for backward compat
+// Alias
 export const useListPromotions = useListAllPromotions;
 
 export function useGetActivePromotions() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Promotion[]>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any[]>({
     queryKey: ['activePromotions'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        const result = await (actor as any).listActivePromotions();
-        return result || [];
-      } catch {
-        return [];
-      }
+      return (actor as any).getActivePromotions();
     },
-    enabled: !!actor && !actorFetching,
-    retry: 1,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching,
   });
 }
 
 export function useCreatePromotion() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (data: any) => {
       if (!actor) throw new Error('Actor not available');
@@ -669,11 +516,10 @@ export function useCreatePromotion() {
 export function useUpdatePromotion() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+    mutationFn: async ({ promotionId, data }: { promotionId: string; data: any }) => {
       if (!actor) throw new Error('Actor not available');
-      return (actor as any).updatePromotion(id, data);
+      return (actor as any).updatePromotion(promotionId, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allPromotions'] });
@@ -685,7 +531,6 @@ export function useUpdatePromotion() {
 export function useDeactivatePromotion() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (promotionId: string) => {
       if (!actor) throw new Error('Actor not available');
@@ -698,125 +543,16 @@ export function useDeactivatePromotion() {
   });
 }
 
-export function useTogglePromotion() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ promotionId, isActive }: { promotionId: string; isActive: boolean }) => {
-      if (!actor) throw new Error('Actor not available');
-      return (actor as any).togglePromotion(promotionId, isActive);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allPromotions'] });
-      queryClient.invalidateQueries({ queryKey: ['activePromotions'] });
-    },
-  });
-}
-
-// ===== USER MANAGEMENT =====
-
-export function useListAllUsers() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<UserProfile[]>({
-    queryKey: ['allUsers'],
-    queryFn: async () => {
-      if (!actor) return [];
-      try {
-        const result = await (actor as any).listAllUsers();
-        return result || [];
-      } catch {
-        return [];
-      }
-    },
-    enabled: !!actor && !actorFetching,
-    retry: 1,
-    staleTime: 30_000,
-  });
-}
-
-export function useAssignUserRole() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ userId, role }: { userId: any; role: string }) => {
-      if (!actor) throw new Error('Actor not available');
-      return (actor as any).assignCallerUserRole(userId, role);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
-    },
-  });
-}
-
-export function useBlockUser() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ userId, reason }: { userId: any; reason?: string }) => {
-      if (!actor) throw new Error('Actor not available');
-      return (actor as any).blockUser(userId, reason ? [reason] : []);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
-      queryClient.invalidateQueries({ queryKey: ['adminActionLogs'] });
-    },
-  });
-}
-
-export function useUnblockUser() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ userId }: { userId: any }) => {
-      if (!actor) throw new Error('Actor not available');
-      return (actor as any).unblockUser(userId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
-      queryClient.invalidateQueries({ queryKey: ['adminActionLogs'] });
-    },
-  });
-}
-
-export function useAdminCreditUser() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ userId, amount, description }: { userId: any; amount: number; description: string }) => {
-      if (!actor) throw new Error('Actor not available');
-      return (actor as any).adminCreditUser(userId, BigInt(amount), description);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
-    },
-  });
-}
-
-// Alias for backward compat
-export const useGrantAdminBonus = useAdminCreditUser;
+// ===== ADMIN ACTION LOGS =====
 
 export function useListAdminActionLogs() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<AdminActionLog[]>({
+  const { actor, isFetching } = useActor();
+  return useQuery<any[]>({
     queryKey: ['adminActionLogs'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        const result = await (actor as any).listAdminActionLogs();
-        return result || [];
-      } catch {
-        return [];
-      }
+      return (actor as any).listAdminActionLogs();
     },
-    enabled: !!actor && !actorFetching,
-    retry: 1,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching,
   });
 }

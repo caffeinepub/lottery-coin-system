@@ -21,6 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from 'sonner';
+// Fix: import UserProfile from @/backend, not from useQueries (it's not exported there)
+import type { UserProfile } from '@/backend';
 import {
   useListAllPromotions,
   useAdminCreditUser,
@@ -28,9 +30,7 @@ import {
   useListAllUsers,
   useCreatePromotion,
   useUpdatePromotion,
-  type UserProfile,
 } from '../../hooks/useQueries';
-import { Principal } from '@dfinity/principal';
 
 function formatTime(ns: bigint | number | undefined) {
   if (!ns) return '—';
@@ -94,6 +94,13 @@ export default function Promotions() {
     startTime: '',
     endTime: '',
   });
+  const [editForm, setEditForm] = useState({
+    description: '',
+    discountPercent: '',
+    bonusAmount: '',
+    startTime: '',
+    endTime: '',
+  });
 
   const activePromotions = (promotions || []).filter(isPromoActive);
 
@@ -106,8 +113,9 @@ export default function Promotions() {
     if (!selectedUser) { toast.error('User not found'); return; }
 
     try {
+      // Fix: pass userId as string (selectedUser.id), not as Principal object
       await grantBonus.mutateAsync({
-        userId: Principal.fromText(selectedUser.id),
+        userId: selectedUser.id,
         amount: parseInt(bonusForm.amount),
         description: bonusForm.description.trim(),
       });
@@ -133,15 +141,16 @@ export default function Promotions() {
     try {
       const startMs = createForm.startTime ? new Date(createForm.startTime).getTime() : Date.now();
       const endMs = createForm.endTime ? new Date(createForm.endTime).getTime() : null;
-      await createPromotion.mutateAsync({
+      const data = {
         promoType: { [createForm.promoType]: null },
         description: createForm.description.trim(),
-        discountPercent: createForm.discountPercent ? [BigInt(createForm.discountPercent)] : [],
-        bonusAmount: createForm.bonusAmount ? [BigInt(createForm.bonusAmount)] : [],
+        discountPercent: createForm.discountPercent ? [parseInt(createForm.discountPercent)] : [],
+        bonusAmount: createForm.bonusAmount ? [parseInt(createForm.bonusAmount)] : [],
         startTime: BigInt(startMs) * BigInt(1_000_000),
         endTime: endMs ? [BigInt(endMs) * BigInt(1_000_000)] : [],
         isActive: true,
-      });
+      };
+      await createPromotion.mutateAsync(data);
       toast.success('Promotion created!');
       setShowCreate(false);
       setCreateForm({ promoType: 'adminBonus', description: '', discountPercent: '', bonusAmount: '', startTime: '', endTime: '' });
@@ -150,17 +159,40 @@ export default function Promotions() {
     }
   };
 
-  const handleUpdate = async (e: React.FormEvent) => {
+  const openEdit = (promo: any) => {
+    setEditPromo(promo);
+    const toLocal = (ns: bigint | undefined) => {
+      if (!ns) return '';
+      const ms = Number(ns) / 1_000_000;
+      const d = new Date(ms);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    setEditForm({
+      description: promo.description || '',
+      discountPercent: promo.discountPercent?.[0]?.toString() ?? '',
+      bonusAmount: promo.bonusAmount?.[0]?.toString() ?? '',
+      startTime: toLocal(promo.startTime),
+      endTime: promo.endTime?.[0] ? toLocal(promo.endTime[0]) : '',
+    });
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editPromo) return;
+    if (!editForm.description.trim()) { toast.error('Description is required'); return; }
     try {
-      await updatePromotion.mutateAsync({
-        id: editPromo.id,
-        data: {
-          description: editPromo.description,
-          isActive: editPromo.isActive,
-        },
-      });
+      const startMs = editForm.startTime ? new Date(editForm.startTime).getTime() : null;
+      const endMs = editForm.endTime ? new Date(editForm.endTime).getTime() : null;
+      const data = {
+        description: editForm.description.trim(),
+        discountPercent: editForm.discountPercent ? [parseInt(editForm.discountPercent)] : [],
+        bonusAmount: editForm.bonusAmount ? [parseInt(editForm.bonusAmount)] : [],
+        startTime: startMs ? BigInt(startMs) * BigInt(1_000_000) : editPromo.startTime,
+        endTime: endMs ? [BigInt(endMs) * BigInt(1_000_000)] : [],
+      };
+      // Fix: use promotionId (not id) to match the hook's expected parameter shape
+      await updatePromotion.mutateAsync({ promotionId: editPromo.id, data });
       toast.success('Promotion updated!');
       setEditPromo(null);
     } catch (err: any) {
@@ -170,166 +202,58 @@ export default function Promotions() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
-            <Gift className="w-7 h-7 text-primary" />
-            Promotions & Bonuses
-          </h1>
-          <p className="text-muted-foreground mt-1">Manage bonus campaigns and promotional offers</p>
-        </div>
-        <Button onClick={() => setShowCreate(!showCreate)} className="bg-primary text-primary-foreground hover:bg-primary/90">
-          <Plus className="w-4 h-4 mr-2" />
-          Create Promotion
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
+          <Gift className="w-7 h-7 text-primary" />
+          Promotions
+        </h1>
+        <p className="text-muted-foreground mt-1">Manage promotions and grant bonuses to users</p>
       </div>
 
-      {/* Create Form */}
-      {showCreate && (
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <h2 className="text-lg font-bold text-foreground mb-4">New Promotion</h2>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-foreground">Promotion Type</Label>
-                <select
-                  value={createForm.promoType}
-                  onChange={(e) => setCreateForm((p) => ({ ...p, promoType: e.target.value }))}
-                  className="w-full h-9 rounded-md border border-border bg-background text-foreground px-3 text-sm"
-                >
-                  {PROMO_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-foreground">Description *</Label>
-                <Input
-                  value={createForm.description}
-                  onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
-                  required
-                  className="bg-background border-border text-foreground"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-foreground">Discount % (optional)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={createForm.discountPercent}
-                  onChange={(e) => setCreateForm((p) => ({ ...p, discountPercent: e.target.value }))}
-                  className="bg-background border-border text-foreground"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-foreground">Bonus Amount (optional)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={createForm.bonusAmount}
-                  onChange={(e) => setCreateForm((p) => ({ ...p, bonusAmount: e.target.value }))}
-                  className="bg-background border-border text-foreground"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-foreground">Start Time</Label>
-                <Input
-                  type="datetime-local"
-                  value={createForm.startTime}
-                  onChange={(e) => setCreateForm((p) => ({ ...p, startTime: e.target.value }))}
-                  className="bg-background border-border text-foreground"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-foreground">End Time (optional)</Label>
-                <Input
-                  type="datetime-local"
-                  value={createForm.endTime}
-                  onChange={(e) => setCreateForm((p) => ({ ...p, endTime: e.target.value }))}
-                  className="bg-background border-border text-foreground"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button type="submit" disabled={createPromotion.isPending} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                {createPromotion.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</> : 'Create'}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => setShowCreate(false)} className="border-border text-foreground">
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Active Promotions */}
-      {activePromotions.length > 0 && (
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <h2 className="text-lg font-bold text-foreground mb-3">🔥 Active Promotions ({activePromotions.length})</h2>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {activePromotions.map((promo: any) => (
-              <div key={promo.id} className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-semibold text-primary">{getPromoTypeLabel(promo.promoType)}</span>
-                  <Badge className="bg-green-600 text-xs">Active</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">{promo.description}</p>
-                {promo.discountPercent?.[0] && (
-                  <p className="text-xs text-green-400 mt-1">{Number(promo.discountPercent[0])}% discount</p>
-                )}
-                {promo.bonusAmount?.[0] && (
-                  <p className="text-xs text-green-400 mt-1">+{Number(promo.bonusAmount[0])} bonus coins</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Grant Bonus Coins */}
+      {/* Grant Bonus Section */}
       <div className="bg-card border border-border rounded-2xl p-6">
-        <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+        <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
           <Coins className="w-5 h-5 text-primary" />
-          Grant Bonus Coins
+          Grant Admin Bonus
         </h2>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-2">
-            <Label className="text-foreground">Select User *</Label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <Label className="text-foreground text-sm">Select User</Label>
             {usersLoading ? (
-              <Skeleton className="h-10" />
+              <Skeleton className="h-9 mt-1" />
             ) : (
               <Select value={bonusForm.userId} onValueChange={(v) => setBonusForm((f) => ({ ...f, userId: v }))}>
-                <SelectTrigger className="bg-background border-border text-foreground">
-                  <SelectValue placeholder="Choose a user" />
+                <SelectTrigger className="mt-1 bg-background border-border text-foreground">
+                  <SelectValue placeholder="Choose user" />
                 </SelectTrigger>
                 <SelectContent>
                   {(users || []).map((u: UserProfile) => (
                     <SelectItem key={u.id} value={u.id}>
-                      {u.name} ({u.email || u.id.slice(0, 8)})
+                      {u.name || u.email || u.id.slice(0, 12) + '...'}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )}
           </div>
-          <div className="space-y-2">
-            <Label className="text-foreground">Bonus Amount (coins) *</Label>
+          <div>
+            <Label className="text-foreground text-sm">Amount (coins)</Label>
             <Input
               type="number"
               min={1}
               placeholder="e.g. 100"
               value={bonusForm.amount}
               onChange={(e) => setBonusForm((f) => ({ ...f, amount: e.target.value }))}
-              className="bg-background border-border text-foreground"
+              className="mt-1 bg-background border-border text-foreground"
             />
           </div>
-          <div className="space-y-2">
-            <Label className="text-foreground">Description *</Label>
+          <div>
+            <Label className="text-foreground text-sm">Description</Label>
             <Input
-              placeholder="Reason for bonus..."
+              placeholder="Reason for bonus"
               value={bonusForm.description}
               onChange={(e) => setBonusForm((f) => ({ ...f, description: e.target.value }))}
-              className="bg-background border-border text-foreground"
+              className="mt-1 bg-background border-border text-foreground"
             />
           </div>
         </div>
@@ -341,86 +265,271 @@ export default function Promotions() {
           {grantBonus.isPending ? (
             <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Granting...</>
           ) : (
-            <><Gift className="w-4 h-4 mr-2" />Grant Bonus</>
+            <><Coins className="w-4 h-4 mr-2" />Grant Bonus</>
           )}
         </Button>
       </div>
 
-      {/* All Promotions Table */}
-      <div>
-        <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-primary" />
-          All Promotions
-        </h2>
+      {/* Create Promotion */}
+      <div className="bg-card border border-border rounded-2xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Plus className="w-5 h-5 text-primary" />
+            Create Promotion
+          </h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCreate((v) => !v)}
+            className="border-border text-foreground"
+          >
+            {showCreate ? 'Cancel' : 'New Promotion'}
+          </Button>
+        </div>
+
+        {showCreate && (
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-foreground text-sm">Promotion Type *</Label>
+                <Select value={createForm.promoType} onValueChange={(v) => setCreateForm((f) => ({ ...f, promoType: v }))}>
+                  <SelectTrigger className="mt-1 bg-background border-border text-foreground">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROMO_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-foreground text-sm">Description *</Label>
+                <Input
+                  placeholder="Promotion description"
+                  value={createForm.description}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
+                  className="mt-1 bg-background border-border text-foreground"
+                />
+              </div>
+              <div>
+                <Label className="text-foreground text-sm">Discount %</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  placeholder="e.g. 10"
+                  value={createForm.discountPercent}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, discountPercent: e.target.value }))}
+                  className="mt-1 bg-background border-border text-foreground"
+                />
+              </div>
+              <div>
+                <Label className="text-foreground text-sm">Bonus Amount (coins)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="e.g. 50"
+                  value={createForm.bonusAmount}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, bonusAmount: e.target.value }))}
+                  className="mt-1 bg-background border-border text-foreground"
+                />
+              </div>
+              <div>
+                <Label className="text-foreground text-sm">Start Date & Time</Label>
+                <Input
+                  type="datetime-local"
+                  value={createForm.startTime}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, startTime: e.target.value }))}
+                  className="mt-1 bg-background border-border text-foreground"
+                />
+              </div>
+              <div>
+                <Label className="text-foreground text-sm">End Date & Time</Label>
+                <Input
+                  type="datetime-local"
+                  value={createForm.endTime}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, endTime: e.target.value }))}
+                  className="mt-1 bg-background border-border text-foreground"
+                />
+              </div>
+            </div>
+            <Button
+              type="submit"
+              disabled={createPromotion.isPending}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {createPromotion.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</>
+              ) : (
+                <><Plus className="w-4 h-4 mr-2" />Create Promotion</>
+              )}
+            </Button>
+          </form>
+        )}
+      </div>
+
+      {/* Edit Promotion Inline */}
+      {editPromo && (
+        <div className="bg-card border border-primary/30 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Edit className="w-5 h-5 text-primary" />
+              Edit Promotion: {editPromo.description}
+            </h2>
+            <Button variant="outline" size="sm" onClick={() => setEditPromo(null)} className="border-border text-foreground">
+              Cancel
+            </Button>
+          </div>
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <Label className="text-foreground text-sm">Description *</Label>
+                <Input
+                  placeholder="Promotion description"
+                  value={editForm.description}
+                  onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                  className="mt-1 bg-background border-border text-foreground"
+                />
+              </div>
+              <div>
+                <Label className="text-foreground text-sm">Discount %</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={editForm.discountPercent}
+                  onChange={(e) => setEditForm((f) => ({ ...f, discountPercent: e.target.value }))}
+                  className="mt-1 bg-background border-border text-foreground"
+                />
+              </div>
+              <div>
+                <Label className="text-foreground text-sm">Bonus Amount (coins)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={editForm.bonusAmount}
+                  onChange={(e) => setEditForm((f) => ({ ...f, bonusAmount: e.target.value }))}
+                  className="mt-1 bg-background border-border text-foreground"
+                />
+              </div>
+              <div>
+                <Label className="text-foreground text-sm">Start Date & Time</Label>
+                <Input
+                  type="datetime-local"
+                  value={editForm.startTime}
+                  onChange={(e) => setEditForm((f) => ({ ...f, startTime: e.target.value }))}
+                  className="mt-1 bg-background border-border text-foreground"
+                />
+              </div>
+              <div>
+                <Label className="text-foreground text-sm">End Date & Time</Label>
+                <Input
+                  type="datetime-local"
+                  value={editForm.endTime}
+                  onChange={(e) => setEditForm((f) => ({ ...f, endTime: e.target.value }))}
+                  className="mt-1 bg-background border-border text-foreground"
+                />
+              </div>
+            </div>
+            <Button
+              type="submit"
+              disabled={updatePromotion.isPending}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {updatePromotion.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </form>
+        </div>
+      )}
+
+      {/* Promotions Table */}
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <div className="p-5 border-b border-border flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Gift className="w-5 h-5 text-primary" />
+            All Promotions
+          </h2>
+          <Badge variant="secondary">{activePromotions.length} active</Badge>
+        </div>
+
         {promoLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+          <div className="p-6 space-y-3">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 rounded-xl" />)}
           </div>
         ) : !promotions || promotions.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground border border-border rounded-xl">
-            <Gift className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>No promotions created yet.</p>
+          <div className="text-center py-16 text-muted-foreground">
+            <Gift size={40} className="mx-auto mb-3 opacity-40" />
+            <p>No promotions yet</p>
           </div>
         ) : (
-          <div className="rounded-xl border border-border overflow-hidden">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Discount / Bonus</TableHead>
-                  <TableHead>Start</TableHead>
-                  <TableHead>End</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-muted-foreground">Type</TableHead>
+                  <TableHead className="text-muted-foreground">Description</TableHead>
+                  <TableHead className="text-muted-foreground">Discount</TableHead>
+                  <TableHead className="text-muted-foreground">Bonus</TableHead>
+                  <TableHead className="text-muted-foreground">Start</TableHead>
+                  <TableHead className="text-muted-foreground">End</TableHead>
+                  <TableHead className="text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-muted-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {promotions.map((promo: any) => {
                   const active = isPromoActive(promo);
                   return (
-                    <TableRow key={promo.id} className={active ? 'bg-primary/5' : ''}>
-                      <TableCell>
-                        <span className="text-sm font-medium">{getPromoTypeLabel(promo.promoType)}</span>
+                    <TableRow key={promo.id} className="border-border hover:bg-accent/30">
+                      <TableCell className="text-foreground text-sm font-medium">
+                        {getPromoTypeLabel(promo.promoType)}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
+                      <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
                         {promo.description}
                       </TableCell>
-                      <TableCell className="text-sm">
-                        {promo.discountPercent?.[0] ? `${Number(promo.discountPercent[0])}% off` : ''}
-                        {promo.bonusAmount?.[0] ? `+${Number(promo.bonusAmount[0])} coins` : ''}
-                        {!promo.discountPercent?.[0] && !promo.bonusAmount?.[0] ? '—' : ''}
+                      <TableCell className="text-foreground text-sm">
+                        {promo.discountPercent?.[0] ? `${promo.discountPercent[0]}%` : '—'}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatTime(promo.startTime)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {promo.endTime?.[0] ? formatTime(promo.endTime[0]) : 'No end'}
+                      <TableCell className="text-foreground text-sm">
+                        {promo.bonusAmount?.[0] ? `${promo.bonusAmount[0]} coins` : '—'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {formatTime(promo.startTime)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {promo.endTime?.[0] ? formatTime(promo.endTime[0]) : '∞'}
                       </TableCell>
                       <TableCell>
-                        {active ? (
-                          <Badge className="bg-green-600 hover:bg-green-700">Active</Badge>
-                        ) : (
-                          <Badge variant="secondary">Inactive</Badge>
-                        )}
+                        <Badge variant={active ? 'default' : 'secondary'}>
+                          {active ? 'Active' : 'Inactive'}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setEditPromo(promo)}
-                            className="h-7 w-7 p-0 border-border"
+                            onClick={() => openEdit(promo)}
+                            className="h-7 text-xs border-border text-foreground hover:bg-accent"
                           >
-                            <Edit className="w-3 h-3" />
+                            <Edit className="w-3 h-3 mr-1" />
+                            Edit
                           </Button>
-                          {promo.isActive && (
+                          {active && (
                             <Button
                               size="sm"
-                              variant="destructive"
+                              variant="outline"
                               onClick={() => handleDeactivate(promo.id)}
                               disabled={deactivate.isPending}
-                              className="h-7 w-7 p-0"
+                              className="h-7 text-xs border-red-500/50 text-red-400 hover:bg-red-500/10"
                             >
-                              <Power className="w-3 h-3" />
+                              <Power className="w-3 h-3 mr-1" />
+                              Deactivate
                             </Button>
                           )}
                         </div>
@@ -433,42 +542,6 @@ export default function Promotions() {
           </div>
         )}
       </div>
-
-      {/* Edit inline form */}
-      {editPromo && (
-        <div className="bg-card border border-primary/30 rounded-2xl p-6">
-          <h2 className="text-lg font-bold text-foreground mb-4">Edit Promotion</h2>
-          <form onSubmit={handleUpdate} className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-foreground">Description</Label>
-              <Input
-                value={editPromo.description}
-                onChange={(e) => setEditPromo((p: any) => ({ ...p, description: e.target.value }))}
-                className="bg-background border-border text-foreground"
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={editPromo.isActive}
-                  onChange={(e) => setEditPromo((p: any) => ({ ...p, isActive: e.target.checked }))}
-                  className="rounded"
-                />
-                Active
-              </label>
-            </div>
-            <div className="flex gap-2">
-              <Button type="submit" disabled={updatePromotion.isPending} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                {updatePromotion.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : 'Save Changes'}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => setEditPromo(null)} className="border-border text-foreground">
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </div>
-      )}
     </div>
   );
 }

@@ -12,8 +12,6 @@ import MixinStorage "blob-storage/Mixin";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 
-
-
 actor {
   // Mixins
   let accessControlState = AccessControl.initState();
@@ -493,10 +491,19 @@ actor {
 
   // ===== USER PROFILE (required by instructions) =====
 
-  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only users can access their profile");
+  // getCallerUserProfile: accessible by any authenticated (non-anonymous) caller.
+  // Returns #err(#notFound) if no profile exists yet, so the frontend can show
+  // the profile setup flow instead of an error message.
+  // Anonymous principals (guests) are rejected since they cannot have a profile.
+  public query ({ caller }) func getCallerUserProfile() : async {
+    #ok : UserProfile;
+    #err : { #notFound; #unauthorized };
+  } {
+    // Reject anonymous callers — they cannot own a profile
+    if (caller.isAnonymous()) {
+      return #err(#unauthorized);
     };
+    // Look up the caller's profile by their Internet Identity principal
     switch (users.get(caller)) {
       case (?user) {
         let role = if (AccessControl.isAdmin(accessControlState, caller)) {
@@ -504,7 +511,7 @@ actor {
         } else {
           "user";
         };
-        ?{
+        #ok({
           id = caller.toText();
           name = user.name;
           email = user.email;
@@ -515,9 +522,11 @@ actor {
           isBlocked = user.isBlocked;
           blockedAt = user.blockedAt;
           referralCode = user.referralCode;
-        };
+        });
       };
-      case null { null };
+      // No profile found — return a clearly distinguishable #notFound variant
+      // so the frontend can show the profile setup flow
+      case null { #err(#notFound) };
     };
   };
 
@@ -576,4 +585,4 @@ actor {
       case null { null };
     };
   };
-};
+}
