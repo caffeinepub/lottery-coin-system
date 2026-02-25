@@ -1,24 +1,80 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Add Admin Panel control link to Navbar",
+  "title": "Secure Admin Login Page with Role-Based Access Control",
   "requirements": [
     {
-      "id": "REQ-49",
-      "summary": "Display 'Admin Panel' navigation link in Navbar for authenticated admin users only, styled with gold accent color and navigating to /admin/dashboard",
+      "id": "REQ-50",
+      "summary": "Create a dedicated Admin Login page at /admin/login with admin ID + password authentication flow, separate from Internet Identity login",
       "acceptanceCriteria": [
-        "When logged in as an admin user, the Navbar shows an 'Admin Panel' link.",
-        "The 'Admin Panel' link navigates to /admin/dashboard.",
-        "The link is styled with gold/amber accent color consistent with the existing theme.",
-        "Non-admin authenticated users do not see the 'Admin Panel' link.",
-        "Unauthenticated users do not see the 'Admin Panel' link.",
-        "The link is visible on every page (Navbar mounted at root layout level)."
+        "A dedicated page renders at /admin/login with its own admin-specific heading and form",
+        "The form contains an admin ID input, a password input, and a submit button",
+        "The page is styled consistently with the gold-and-dark theme",
+        "Internet Identity login is not shown or used on this page",
+        "Submitting valid credentials redirects the admin to /admin/dashboard",
+        "Submitting invalid credentials shows a visible inline error message",
+        "The submit button is disabled during the pending request to prevent double submission"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/Navbar.tsx",
+          "path": "frontend/src/pages/admin/AdminLogin.tsx",
+          "operation": "create",
+          "description": "Create a dedicated Admin Login page component with a form containing admin ID and password inputs, a 'Sign In as Admin' submit button, and inline error display. Style consistently with the gold-and-dark theme. On successful login, call the adminLogin backend method (to be added to useQueries), store the returned admin session token in AuthContext, and navigate to /admin/dashboard. On failure, display 'Invalid admin credentials' inline. Disable the submit button while the request is pending. Include a subtle 'Back to User Login' link to /login."
+        },
+        {
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Add conditional rendering of 'Admin Panel' link based on user authentication and admin role. Use the useAuth hook from AuthContext to check authentication state and the backend actor's isCallerAdmin method (or userProfile.role === 'admin') to verify admin status. Insert the link between the authenticated nav items and the coin balance display. Style the link with gold/amber accent color (text-amber-400 hover:text-amber-300) to match the existing theme. Ensure the link navigates to /admin/dashboard using the router Link component and is only visible when the user is authenticated and has admin role."
+          "description": "Add a new route for /admin/login that renders the AdminLogin page component. The route must be accessible without authentication (no auth guard). Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-53",
+      "summary": "Store admin session token in AuthContext and localStorage, pass it to all admin API calls, and implement adminLogout functionality",
+      "acceptanceCriteria": [
+        "Admin session token is stored in AuthContext state and localStorage after successful adminLogin",
+        "All admin React Query mutation and query hooks pass the adminSessionToken to backend calls",
+        "After adminLogin succeeds, the user is redirected to /admin/dashboard",
+        "An adminLogout function clears the token and redirects to /admin/login",
+        "Admin panel routes (/admin/*) check for a valid adminSessionToken; if absent, redirect to /admin/login"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/contexts/AuthContext.tsx",
+          "operation": "modify",
+          "description": "Add adminSessionToken state (string | null) to the AuthContext. Add an adminLogin function that accepts (adminId: string, password: string), calls the backend adminLogin method, stores the returned token in state and localStorage under the key 'adminSessionToken', and returns success/error. Add an adminLogout function that clears adminSessionToken from state and localStorage. On context initialization, attempt to restore adminSessionToken from localStorage. Expose adminSessionToken, adminLogin, adminLogout, and a computed isAdmin boolean (true if adminSessionToken is present) in the context value."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add a useAdminLogin mutation hook that calls the backend adminLogin(adminId: Text, password: Text) method and returns the session token or error. Update all existing admin mutation and query hooks (useBlockUser, useUnblockUser, useAssignRole, useGrantAdminBonus, useCreatePromotion, useUpdatePromotion, useDeactivatePromotion, etc.) to read adminSessionToken from AuthContext via useAuth() and pass it as an additional parameter to their backend calls. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Update all admin routes (/admin/*) except /admin/login to check for a valid adminSessionToken from AuthContext. If the token is missing, redirect to /admin/login using the router's redirect mechanism. Ensure /admin/login remains accessible without the token."
+        }
+      ]
+    },
+    {
+      "id": "REQ-54",
+      "summary": "Add a subtle 'Admin Portal' link on the main Login page and a 'Back to User Login' link on the Admin Login page",
+      "acceptanceCriteria": [
+        "A subtle 'Admin Portal' or 'Admin Login' link appears on the main /login page linking to /admin/login",
+        "The link is styled less prominently than the primary login action (e.g., small text link at the bottom)",
+        "The /admin/login page contains a 'Back to User Login' link navigating to /login",
+        "The admin login link is not shown in the main Navbar to avoid visibility to regular users"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/Login.tsx",
+          "operation": "modify",
+          "description": "Add a subtle 'Admin Portal' text link at the bottom of the Login page that navigates to /admin/login. Style the link with smaller font size and muted color to keep it unobtrusive (e.g., text-sm text-muted-foreground). Do not add any admin links to the Navbar component."
+        },
+        {
+          "path": "frontend/src/pages/admin/AdminLogin.tsx",
+          "operation": "modify",
+          "description": "Ensure the AdminLogin page includes a 'Back to User Login' link that navigates to /login, styled consistently with the subtle admin portal link on the main login page."
         }
       ]
     }

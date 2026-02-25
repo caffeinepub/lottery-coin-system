@@ -13,7 +13,8 @@ import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 
 actor {
-  // Mixins
+  // ===== MIXINS =====
+
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
   include MixinStorage();
@@ -274,6 +275,13 @@ actor {
     timestamp : Time.Time;
   };
 
+  // ===== AUTH =====
+
+  // Rely on system principal
+  // func getCallerPrincipal({ caller }) {
+  //   caller;
+  // };
+
   // ===== STABLE STATE =====
 
   var nextLotteryPoolId : Nat = 0;
@@ -382,12 +390,6 @@ actor {
   // requireUserRecord returns user record without blocked check (for internal use)
   func getUserRecord(userId : Principal) : ?UserRecord {
     users.get(userId);
-  };
-
-  func requireAdmin(caller : Principal) {
-    if (not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Only admins can perform this action");
-    };
   };
 
   func generateReferralCode(name : Text, timestamp : Time.Time) : Text {
@@ -530,11 +532,15 @@ actor {
     };
   };
 
+  // saveCallerUserProfile: only authenticated, non-blocked users with the #user role
+  // may update their own profile.
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
+    // Enforce #user role via AccessControl
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
-    ignore requireUser(caller);
+    // Also enforce the user record exists and the account is not blocked
+    let _ = requireUser(caller);
     switch (users.get(caller)) {
       case (?u) {
         let updated : UserRecord = {
@@ -560,6 +566,7 @@ actor {
     };
   };
 
+  // getUserProfile: a user may view their own profile; admins may view any profile.
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
@@ -585,4 +592,4 @@ actor {
       case null { null };
     };
   };
-}
+};

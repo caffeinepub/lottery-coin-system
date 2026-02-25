@@ -1,12 +1,16 @@
 # Specification
 
 ## Summary
-**Goal:** Add an "Admin Panel" link to the Navbar that is only visible to authenticated admin users.
+**Goal:** Add a secure, separate admin login system with role-based access control to the LuckyCoins Lottery app.
 
 **Planned changes:**
-- Update the Navbar component to show an "Admin Panel" link when the logged-in user has `role=admin`
-- The link navigates to `/admin/dashboard`
-- Style the link with gold/amber accent color and hover highlight, consistent with the existing gold-and-dark theme
-- Hide the link from non-admin and unauthenticated users
+- Add a dedicated Admin Login page at `/admin/login` with an admin ID + password form (no Internet Identity), styled with the gold-and-dark theme
+- Add a subtle "Admin Portal" link on the main `/login` page and a "Back to User Login" link on the admin login page
+- Add a backend `adminLogin(adminId, password)` endpoint that validates credentials against a stored hash and returns a short-lived session token stored in stable state
+- Add an `initAdminCredentials` function callable only once or by the controller to set the admin ID and hashed password
+- Update all existing admin-only backend endpoints to validate the admin session token, returning `#err(#unauthorized)` if missing, expired, or invalid
+- Store the admin session token in AuthContext and localStorage after successful login, and pass it to all admin API calls
+- Add an `adminLogout` function in AuthContext that clears the admin token and redirects to `/admin/login`
+- Protect all `/admin/*` routes by checking for a valid admin session token, redirecting to `/admin/login` if absent
 
-**User-visible outcome:** Admin users see an "Admin Panel" link in the Navbar on every page, allowing quick access to the admin dashboard. Non-admin and unauthenticated users see no change.
+**User-visible outcome:** Administrators can log in via a dedicated admin portal using an admin ID and password, gaining access to the admin dashboard. Regular users are unaffected, and all admin endpoints are protected by the session token.

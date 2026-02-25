@@ -2,10 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-ensure-the-navbar-component-displays-a-clearly-visible-admin-panel-link-button-for-authenticated-admin-users-the-link-must-navigate-to-admin-dashboard-and-be-styled-consistently-with-the-gold-and-dark-theme-gold-accent-color-hover-highlight-it-must-appear-in-the-main-navbar-on-every-page-when-the-logged-in-user-has-role-admin-and-must-not-be-visible-to-non-admin-users",
-      "featureTitle": "Ensure the Navbar component displays a clearly visible 'Admin Panel' link/button for authenticated admin users. The link must navigate to /admin/dashboard and be styled consistently with the gold-and-dark theme (gold accent color, hover highlight). It must appear in the main Navbar on every page when the logged-in user has role=admin, and must not be visible to non-admin users.",
+      "featureId": "feature-create-a-dedicated-admin-login-page-at-admin-login-that-is-visually-and-functionally-separate-from-the-regular-user-login-page-the-page-must-display-an-admin-portal-heading-an-admin-id-input-field-a-password-input-field-and-a-sign-in-as-admin-submit-button-on-submission-validate-credentials-against-the-backend-and-on-success-store-the-admin-session-and-redirect-to-admin-dashboard-on-failure-show-an-inline-error-message-invalid-admin-credentials-the-page-must-be-accessible-without-authentication-and-must-not-use-internet-identity-it-uses-a-separate-admin-id-password-flow",
+      "featureTitle": "Create a dedicated Admin Login page at `/admin/login` that is visually and functionally separate from the regular user login page. The page must display an 'Admin Portal' heading, an admin ID input field, a password input field, and a 'Sign In as Admin' submit button. On submission, validate credentials against the backend and, on success, store the admin session and redirect to `/admin/dashboard`. On failure, show an inline error message ('Invalid admin credentials'). The page must be accessible without authentication and must NOT use Internet Identity — it uses a separate admin ID + password flow.",
       "files": [
-        "frontend/src/components/Navbar.tsx"
+        "frontend/src/App.tsx",
+        "frontend/src/pages/admin/AdminLogin.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -17,7 +18,50 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-49"
+        "REQ-50"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-store-the-admin-session-token-returned-by-adminlogin-in-the-frontend-authcontext-and-localstorage-under-a-key-such-as-adminsessiontoken-pass-this-token-to-all-admin-api-calls-via-the-existing-query-mutation-hooks-in-usequeries-ts-on-the-admin-login-page-after-a-successful-adminlogin-call-update-authcontext-state-to-reflect-the-admin-session-and-navigate-to-admin-dashboard-implement-an-adminlogout-function-in-authcontext-that-clears-the-admin-session-token-from-state-and-localstorage-and-redirects-to-admin-login",
+      "featureTitle": "Store the admin session token returned by `adminLogin` in the frontend AuthContext (and localStorage under a key such as `adminSessionToken`). Pass this token to all admin API calls via the existing query/mutation hooks in `useQueries.ts`. On the admin login page, after a successful `adminLogin` call, update AuthContext state to reflect the admin session and navigate to `/admin/dashboard`. Implement an `adminLogout` function in AuthContext that clears the admin session token from state and localStorage and redirects to `/admin/login`.",
+      "files": [
+        "frontend/src/App.tsx",
+        "frontend/src/contexts/AuthContext.tsx",
+        "frontend/src/hooks/useQueries.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-53"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-navigation-link-to-the-admin-login-page-admin-login-on-the-main-login-page-and-or-landing-page-visually-distinguished-as-admin-portal-or-admin-login-the-link-must-be-subtle-not-prominent-to-avoid-drawing-regular-users-to-the-admin-portal-but-must-be-discoverable-for-administrators-on-the-admin-login-page-include-a-link-back-to-the-regular-user-login-page",
+      "featureTitle": "Add a navigation link to the Admin Login page (`/admin/login`) on the main Login page and/or Landing page, visually distinguished as 'Admin Portal' or 'Admin Login'. The link must be subtle (not prominent) to avoid drawing regular users to the admin portal, but must be discoverable for administrators. On the Admin Login page, include a link back to the regular user login page.",
+      "files": [
+        "frontend/src/pages/Login.tsx",
+        "frontend/src/pages/admin/AdminLogin.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-54"
       ],
       "confidence": "high"
     }

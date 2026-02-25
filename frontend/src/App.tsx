@@ -1,6 +1,6 @@
 import React, { Suspense, Component, ErrorInfo, ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { RouterProvider, createRouter, createRoute, createRootRoute, Outlet, redirect } from '@tanstack/react-router';
+import { RouterProvider, createRouter, createRoute, createRootRoute, Outlet } from '@tanstack/react-router';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -21,6 +21,7 @@ import TransactionHistory from '@/pages/TransactionHistory';
 import DrawResults from '@/pages/DrawResults';
 
 // Admin Pages
+import AdminLogin from '@/pages/admin/AdminLogin';
 import AdminDashboard from '@/pages/admin/AdminDashboard';
 import BalanceRequests from '@/pages/admin/BalanceRequests';
 import WithdrawalManagement from '@/pages/admin/WithdrawalManagement';
@@ -74,7 +75,7 @@ const LoadingSpinner = () => (
 
 // Layout wrapper with Navbar
 function RootLayout() {
-  const { isAuthenticated, isLoading, userProfile, isFetched, showProfileSetup, completeProfileSetup } = useAuth();
+  const { showProfileSetup, completeProfileSetup } = useAuth();
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -105,17 +106,12 @@ function AuthGuard({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-// Admin guard
+// Admin session guard — checks for valid adminSessionToken
 function AdminGuard({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading, userProfile } = useAuth();
+  const { isAdmin } = useAuth();
 
-  if (isLoading) return <LoadingSpinner />;
-  if (!isAuthenticated) {
-    window.location.href = '/login';
-    return <LoadingSpinner />;
-  }
-  if (userProfile?.role !== 'admin') {
-    window.location.href = '/dashboard';
+  if (!isAdmin) {
+    window.location.href = '/admin/login';
     return <LoadingSpinner />;
   }
   return <>{children}</>;
@@ -140,8 +136,10 @@ function AdminLayout() {
 }
 
 function AdminSidebar() {
+  const { adminLogout } = useAuth();
+
   const links = [
-    { href: '/admin', label: 'Dashboard', icon: '📊' },
+    { href: '/admin/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/admin/lotteries', label: 'Lottery Management', icon: '🎰' },
     { href: '/admin/balance-requests', label: 'Balance Requests', icon: '💰' },
     { href: '/admin/withdrawals', label: 'Withdrawals', icon: '💸' },
@@ -150,12 +148,22 @@ function AdminSidebar() {
     { href: '/admin/draws', label: 'Draw Declaration', icon: '🎲' },
   ];
 
+  const handleAdminLogout = () => {
+    adminLogout();
+    window.location.href = '/admin/login';
+  };
+
   return (
-    <aside className="w-64 bg-card border-r border-border flex-shrink-0">
+    <aside className="w-64 bg-card border-r border-border flex-shrink-0 flex flex-col">
       <div className="p-4 border-b border-border">
-        <h2 className="text-lg font-bold text-primary">Admin Panel</h2>
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center">
+            <span className="text-amber-400 text-xs">🛡</span>
+          </div>
+          <h2 className="text-lg font-bold text-amber-400">Admin Panel</h2>
+        </div>
       </div>
-      <nav className="p-2">
+      <nav className="p-2 flex-1">
         {links.map((link) => (
           <a
             key={link.href}
@@ -167,6 +175,15 @@ function AdminSidebar() {
           </a>
         ))}
       </nav>
+      <div className="p-3 border-t border-border">
+        <button
+          onClick={handleAdminLogout}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors"
+        >
+          <span>🚪</span>
+          <span>Admin Logout</span>
+        </button>
+      </div>
     </aside>
   );
 }
@@ -280,7 +297,14 @@ const drawResultsRoute = createRoute({
   component: DrawResults,
 });
 
-// Admin routes
+// Admin login route (no auth guard — publicly accessible)
+const adminLoginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/login',
+  component: AdminLogin,
+});
+
+// Admin routes (protected by AdminGuard via AdminLayout)
 const adminRootRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin',
@@ -290,6 +314,12 @@ const adminRootRoute = createRoute({
 const adminIndexRoute = createRoute({
   getParentRoute: () => adminRootRoute,
   path: '/',
+  component: AdminDashboard,
+});
+
+const adminDashboardRoute = createRoute({
+  getParentRoute: () => adminRootRoute,
+  path: '/dashboard',
   component: AdminDashboard,
 });
 
@@ -341,8 +371,10 @@ const routeTree = rootRoute.addChildren([
   withdrawRoute,
   transactionsRoute,
   drawResultsRoute,
+  adminLoginRoute,
   adminRootRoute.addChildren([
     adminIndexRoute,
+    adminDashboardRoute,
     adminBalanceRequestsRoute,
     adminWithdrawalsRoute,
     adminLotteriesRoute,

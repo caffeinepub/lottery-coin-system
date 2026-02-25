@@ -5,7 +5,7 @@ import { Coins, LogIn, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function Login() {
-  const { login, loginStatus, identity } = useInternetIdentity();
+  const { login, loginStatus } = useInternetIdentity();
   const { isAuthenticated } = useAuth();
 
   const isLoggingIn = loginStatus === 'logging-in';
@@ -79,6 +79,16 @@ export default function Login() {
           <p className="text-center text-xs text-muted-foreground mt-6">
             By signing in, you agree to our Terms of Service and Privacy Policy.
           </p>
+
+          {/* Subtle Admin Portal link */}
+          <div className="mt-5 pt-4 border-t border-border/50 text-center">
+            <a
+              href="/admin/login"
+              className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            >
+              Admin Portal
+            </a>
+          </div>
         </div>
       </div>
     </div>

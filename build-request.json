@@ -1,39 +1,120 @@
 {
   "kind": "build_request",
-  "title": "Add Admin Panel control link to Navbar",
-  "projectName": "LuckyCoins",
+  "title": "Secure Admin Login Page with Role-Based Access Control",
+  "projectName": "LuckyCoins Lottery",
   "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-49",
-      "text": "Ensure the Navbar component displays a clearly visible 'Admin Panel' link/button for authenticated admin users. The link must navigate to /admin/dashboard and be styled consistently with the gold-and-dark theme (gold accent color, hover highlight). It must appear in the main Navbar on every page when the logged-in user has role=admin, and must not be visible to non-admin users.",
+      "id": "REQ-50",
+      "text": "Create a dedicated Admin Login page at `/admin/login` that is visually and functionally separate from the regular user login page. The page must display an 'Admin Portal' heading, an admin ID input field, a password input field, and a 'Sign In as Admin' submit button. On submission, validate credentials against the backend and, on success, store the admin session and redirect to `/admin/dashboard`. On failure, show an inline error message ('Invalid admin credentials'). The page must be accessible without authentication and must NOT use Internet Identity — it uses a separate admin ID + password flow.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-6"
         ],
         "quotes": [
-          "Admin panel control link"
+          "Provide a secure admin login link (separate from user login) with a dedicated admin ID and password"
         ]
       },
       "acceptanceCriteria": [
-        "When logged in as an admin user, the Navbar shows an 'Admin Panel' link.",
-        "The 'Admin Panel' link navigates to /admin/dashboard.",
-        "The link is styled with gold/amber accent color consistent with the existing theme.",
-        "Non-admin authenticated users do not see the 'Admin Panel' link.",
-        "Unauthenticated users do not see the 'Admin Panel' link.",
-        "The link is visible on every page (Navbar mounted at root layout level)."
+        "A dedicated page renders at /admin/login with its own admin-specific heading and form",
+        "The form contains an admin ID input, a password input, and a submit button",
+        "The page is styled consistently with the gold-and-dark theme",
+        "Internet Identity login is not shown or used on this page",
+        "Submitting valid credentials redirects the admin to /admin/dashboard",
+        "Submitting invalid credentials shows a visible inline error message",
+        "The submit button is disabled during the pending request to prevent double submission"
+      ]
+    },
+    {
+      "id": "REQ-51",
+      "text": "Add a backend Motoko endpoint `adminLogin(adminId: Text, password: Text)` in the main actor that validates the provided admin ID and password against a stored admin credential record (hashed password). On success, generate and return a short-lived admin session token (random 32-byte hex string) stored in a stable HashMap keyed by token with the admin's principal/userId and an expiry timestamp. On failure, return `#err(#invalidCredentials)`. Add a stable variable for admin credentials (a single hardcoded admin ID with a hashed password set at deploy time, configurable via an `initAdminCredentials` function callable only once or only by the canister controller).",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ],
+        "quotes": [
+          "dedicated admin ID and password, protected by JWT authentication and role-based access control"
+        ]
+      },
+      "acceptanceCriteria": [
+        "adminLogin endpoint exists and accepts adminId and password parameters",
+        "Password is compared against a stored hash (not plaintext)",
+        "On success, a unique session token is returned and stored in stable state with an expiry",
+        "On failure, #err(#invalidCredentials) is returned",
+        "An initAdminCredentials function allows setting the admin ID and hashed password, callable only once or only by the controller",
+        "The session token is scoped to the admin role and distinct from regular user session tokens"
+      ]
+    },
+    {
+      "id": "REQ-52",
+      "text": "Update all existing admin-only backend endpoints to accept and validate the admin session token (returned by `adminLogin`) as an additional authorization check, in addition to the existing role check. If the admin session token is missing, expired, or invalid, return `#err(#unauthorized)`. This ensures that even if a non-admin user somehow obtains a session, they cannot call admin endpoints without a valid admin session token.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ],
+        "quotes": [
+          "protected by JWT authentication and role-based access control, allowing only authorized admins to access the admin dashboard and management features"
+        ]
+      },
+      "acceptanceCriteria": [
+        "All existing admin endpoints (listPendingBalanceRequests, approveBalanceRequest, rejectBalanceRequest, listWithdrawals, approveWithdrawal, rejectWithdrawal, createLottery, updateLottery, declareDraw, listAllUsers, getDashboardStats, blockUser, unblockUser, listAdminActionLogs, grantAdminBonus, createPromotion, updatePromotion, deactivatePromotion, listPromotions) validate the admin session token",
+        "Requests with a missing or expired admin token return #err(#unauthorized)",
+        "Regular user session tokens are rejected for admin endpoints"
+      ]
+    },
+    {
+      "id": "REQ-53",
+      "text": "Store the admin session token returned by `adminLogin` in the frontend AuthContext (and localStorage under a key such as `adminSessionToken`). Pass this token to all admin API calls via the existing query/mutation hooks in `useQueries.ts`. On the admin login page, after a successful `adminLogin` call, update AuthContext state to reflect the admin session and navigate to `/admin/dashboard`. Implement an `adminLogout` function in AuthContext that clears the admin session token from state and localStorage and redirects to `/admin/login`.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ],
+        "quotes": [
+          "role-based access control, allowing only authorized admins to access the admin dashboard and management features"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Admin session token is stored in AuthContext state and localStorage after successful adminLogin",
+        "All admin React Query mutation and query hooks pass the adminSessionToken to backend calls",
+        "After adminLogin succeeds, the user is redirected to /admin/dashboard",
+        "An adminLogout function clears the token and redirects to /admin/login",
+        "Admin panel routes (/admin/*) check for a valid adminSessionToken; if absent, redirect to /admin/login"
+      ]
+    },
+    {
+      "id": "REQ-54",
+      "text": "Add a navigation link to the Admin Login page (`/admin/login`) on the main Login page and/or Landing page, visually distinguished as 'Admin Portal' or 'Admin Login'. The link must be subtle (not prominent) to avoid drawing regular users to the admin portal, but must be discoverable for administrators. On the Admin Login page, include a link back to the regular user login page.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ],
+        "quotes": [
+          "Provide a secure admin login link (separate from user login)"
+        ]
+      },
+      "acceptanceCriteria": [
+        "A subtle 'Admin Portal' or 'Admin Login' link appears on the main /login page linking to /admin/login",
+        "The link is styled less prominently than the primary login action (e.g., small text link at the bottom)",
+        "The /admin/login page contains a 'Back to User Login' link navigating to /login",
+        "The admin login link is not shown in the main Navbar to avoid visibility to regular users"
       ]
     }
   ],
   "constraints": [
-    "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui.",
-    "Do not change backend logic or data models."
+    "The admin login page must NOT use Internet Identity; it uses a standalone admin ID + password form",
+    "Admin session tokens must be separate from regular user session tokens in both backend storage and frontend state",
+    "Do not modify frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or any file under frontend/src/components/ui"
   ],
   "nonGoals": [
-    "Adding new admin pages or routes.",
-    "Changing any admin page content.",
-    "Modifying authentication or authorization logic beyond the Navbar display."
+    "Adding multiple admin accounts or an admin user management system (single admin credential only)",
+    "Email-based admin password reset flow",
+    "Changing the existing Internet Identity login flow for regular users",
+    "Implementing JWT library dependencies — use the existing Motoko session token pattern (random hex string in stable HashMap)"
   ],
   "imageRequirements": {
     "required": [],

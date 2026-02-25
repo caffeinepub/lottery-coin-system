@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from '@/hooks/useActor';
+import { useAuth } from '@/contexts/AuthContext';
 import type {
   UserProfile,
   Variant_notFound_unauthorized,
@@ -28,11 +29,9 @@ export function useGetCallerUserProfile() {
         if (result.__kind__ === 'ok') {
           return (result as any).ok as UserProfile;
         } else {
-          // #notFound or #unauthorized — return null to indicate no profile
           return null;
         }
       }
-      // Fallback
       return null;
     },
     enabled: !!actor && !actorFetching,
@@ -57,6 +56,22 @@ export function useSaveCallerUserProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+  });
+}
+
+// ===== ADMIN LOGIN =====
+
+export function useAdminLogin() {
+  const { adminLogin } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ adminId, password }: { adminId: string; password: string }) => {
+      const result = await adminLogin(adminId, password);
+      if (!result.success) {
+        throw new Error(result.error || 'Invalid admin credentials');
+      }
+      return result;
     },
   });
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 17,
+  "projectStateVersion": 19,
   "summary": "Full-stack lottery coin system with React.js frontend, Node.js + Express backend, and MySQL database. Features include email OTP authentication, coin-based wallet, balance addition with admin approval, lottery ticket purchasing (6-digit hourly, 9-digit daily, 12-digit weekly jackpot draws with massive prize pools, plus 1h/3h/5h/12h timed draws), dynamic prize pools (fixed ticket price, fixed max tickets, max 50 tickets per user, draw on time even if not full, admin can create pools), live tracking of tickets sold/remaining/total pool, 90% revenue distribution to winners (minimum 70% win, tiered prizes for 1st/2nd/3rd), full result transparency, automated draw results with winner crediting, withdrawal system with admin approval, bonus/promotional system (admin bonus coins, first-user 90% discount, referral bonuses, limited-time discounts, cashback, loyalty rewards, festival campaigns), and a complete admin panel with user management (block/unblock, action logs).",
   "architectural_notes": [
     "Backend: Node.js + Express + MySQL with bcrypt, JWT, multer for file uploads, rate limiting, and CORS",
@@ -18,7 +18,7 @@
     "Website and admin panel not rendering/displaying correctly after Version 3 deployment",
     "'User Record Not Found' error appears on dashboard profile setup page after clicking 'Get Started' — user profile not being created/fetched correctly after authentication"
   ],
-  "isFixRequest": true,
+  "isFixRequest": false,
   "existing_features": [
     {
       "id": "feature-build-the-react-frontend-with-react-router-for-navigation-and-the-following-pages-landing-home-register-with-otp-step-login-user-dashboard-coin-balance-active-lotteries-summary-lottery-list-buy-ticket-with-number-picker-for-3-digit-5-digit-or-auto-generate-for-jackpot-festival-my-tickets-add-balance-with-base64-image-capture-for-payment-proof-withdrawal-request-transaction-history-and-a-full-admin-section-with-sub-pages-admin-dashboard-balance-requests-management-withdrawal-management-lottery-management-create-edit-user-management-and-draw-results-declaration",
@@ -225,6 +225,30 @@
       "title": "Ensure the Navbar component displays a clearly visible 'Admin Panel' link/button for authenticated admin users. The link must navigate to /admin/dashboard and be styled consistently with the gold-and-dark theme (gold accent color, hover highlight). It must appear in the main Navbar on every page when the logged-in user has role=admin, and must not be visible to non-admin users.",
       "reqIds": [
         "REQ-49"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-dedicated-admin-login-page-at-admin-login-that-is-visually-and-functionally-separate-from-the-regular-user-login-page-the-page-must-display-an-admin-portal-heading-an-admin-id-input-field-a-password-input-field-and-a-sign-in-as-admin-submit-button-on-submission-validate-credentials-against-the-backend-and-on-success-store-the-admin-session-and-redirect-to-admin-dashboard-on-failure-show-an-inline-error-message-invalid-admin-credentials-the-page-must-be-accessible-without-authentication-and-must-not-use-internet-identity-it-uses-a-separate-admin-id-password-flow",
+      "title": "Create a dedicated Admin Login page at `/admin/login` that is visually and functionally separate from the regular user login page. The page must display an 'Admin Portal' heading, an admin ID input field, a password input field, and a 'Sign In as Admin' submit button. On submission, validate credentials against the backend and, on success, store the admin session and redirect to `/admin/dashboard`. On failure, show an inline error message ('Invalid admin credentials'). The page must be accessible without authentication and must NOT use Internet Identity — it uses a separate admin ID + password flow.",
+      "reqIds": [
+        "REQ-50"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-store-the-admin-session-token-returned-by-adminlogin-in-the-frontend-authcontext-and-localstorage-under-a-key-such-as-adminsessiontoken-pass-this-token-to-all-admin-api-calls-via-the-existing-query-mutation-hooks-in-usequeries-ts-on-the-admin-login-page-after-a-successful-adminlogin-call-update-authcontext-state-to-reflect-the-admin-session-and-navigate-to-admin-dashboard-implement-an-adminlogout-function-in-authcontext-that-clears-the-admin-session-token-from-state-and-localstorage-and-redirects-to-admin-login",
+      "title": "Store the admin session token returned by `adminLogin` in the frontend AuthContext (and localStorage under a key such as `adminSessionToken`). Pass this token to all admin API calls via the existing query/mutation hooks in `useQueries.ts`. On the admin login page, after a successful `adminLogin` call, update AuthContext state to reflect the admin session and navigate to `/admin/dashboard`. Implement an `adminLogout` function in AuthContext that clears the admin session token from state and localStorage and redirects to `/admin/login`.",
+      "reqIds": [
+        "REQ-53"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-navigation-link-to-the-admin-login-page-admin-login-on-the-main-login-page-and-or-landing-page-visually-distinguished-as-admin-portal-or-admin-login-the-link-must-be-subtle-not-prominent-to-avoid-drawing-regular-users-to-the-admin-portal-but-must-be-discoverable-for-administrators-on-the-admin-login-page-include-a-link-back-to-the-regular-user-login-page",
+      "title": "Add a navigation link to the Admin Login page (`/admin/login`) on the main Login page and/or Landing page, visually distinguished as 'Admin Portal' or 'Admin Login'. The link must be subtle (not prominent) to avoid drawing regular users to the admin portal, but must be discoverable for administrators. On the Admin Login page, include a link back to the regular user login page.",
+      "reqIds": [
+        "REQ-54"
       ],
       "version": 1
     }
@@ -501,6 +525,28 @@
       "summary": "Audit and fix the backend `getMyProfile` (or equivalent endpoint used by AuthContext to fetch the current user's profile) to ensure it correctly looks up the caller's profile by their Internet Identity principal. If no profile exists for the principal, return a clearly distinguishable 'not found' variant (e.g. `#err(#notFound)`) rather than a generic error, so the frontend can show the profile setup flow instead of an error message.",
       "reqIds": [
         "REQ-46"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-51",
+      "summary": "Separate secure admin login page with dedicated admin ID and password, protected by JWT authentication and role-based access control, allowing only authorized admins to access the admin dashboard and management features",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-53",
+      "summary": "Add a backend Motoko endpoint `adminLogin(adminId: Text, password: Text)` in the main actor that validates the provided admin ID and password against a stored admin credential record (hashed password). On success, generate and return a short-lived admin session token (random 32-byte hex string) stored in a stable HashMap keyed by token with the admin's principal/userId and an expiry timestamp. On failure, return `#err(#invalidCredentials)`. Add a stable variable for admin credentials (a single hardcoded admin ID with a hashed password set at deploy time, configurable via an `initAdminCredentials` function callable only once or only by the canister controller).",
+      "reqIds": [
+        "REQ-51"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-54",
+      "summary": "Update all existing admin-only backend endpoints to accept and validate the admin session token (returned by `adminLogin`) as an additional authorization check, in addition to the existing role check. If the admin session token is missing, expired, or invalid, return `#err(#unauthorized)`. This ensures that even if a non-admin user somehow obtains a session, they cannot call admin endpoints without a valid admin session token.",
+      "reqIds": [
+        "REQ-52"
       ],
       "status": "pending"
     }

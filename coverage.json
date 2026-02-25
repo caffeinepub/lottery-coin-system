@@ -1,34 +1,83 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-25T22:40:48.400Z",
+  "generatedAt": "2026-02-25T22:55:26.933Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 1,
-    "implemented": 1,
+    "total": 5,
+    "implemented": 3,
     "items": [
       {
-        "id": "REQ-49",
-        "summary": "Ensure the Navbar component displays a clearly visible 'Admin Panel' link/button for authenticated admin users. The link must navigate to /admin/dashboard and be styled consistently with the gold-and-dark theme (gold accent color, hover highlight). It must appear in the main Navbar on every page when the logged-in user has role=admin, and must not be visible to non-admin users.",
+        "id": "REQ-50",
+        "summary": "Create a dedicated Admin Login page at `/admin/login` that is visually and functionally separate from the regular user login page. The page must display an 'Admin Portal' heading, an admin ID input field, a password input field, and a 'Sign In as Admin' submit button. On submission, validate credentials against the backend and, on success, store the admin session and redirect to `/admin/dashboard`. On failure, show an inline error message ('Invalid admin credentials'). The page must be accessible without authentication and must NOT use Internet Identity — it uses a separate admin ID + password flow.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/Navbar.tsx"
+          "frontend/src/pages/admin/AdminLogin.tsx",
+          "frontend/src/App.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/Navbar.tsx"
+          "frontend/src/pages/admin/AdminLogin.tsx",
+          "frontend/src/App.tsx"
+        ]
+      },
+      {
+        "id": "REQ-51",
+        "summary": "Add a backend Motoko endpoint `adminLogin(adminId: Text, password: Text)` in the main actor that validates the provided admin ID and password against a stored admin credential record (hashed password). On success, generate and return a short-lived admin session token (random 32-byte hex string) stored in a stable HashMap keyed by token with the admin's principal/userId and an expiry timestamp. On failure, return `#err(#invalidCredentials)`. Add a stable variable for admin credentials (a single hardcoded admin ID with a hashed password set at deploy time, configurable via an `initAdminCredentials` function callable only once or only by the canister controller).",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-52",
+        "summary": "Update all existing admin-only backend endpoints to accept and validate the admin session token (returned by `adminLogin`) as an additional authorization check, in addition to the existing role check. If the admin session token is missing, expired, or invalid, return `#err(#unauthorized)`. This ensures that even if a non-admin user somehow obtains a session, they cannot call admin endpoints without a valid admin session token.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-53",
+        "summary": "Store the admin session token returned by `adminLogin` in the frontend AuthContext (and localStorage under a key such as `adminSessionToken`). Pass this token to all admin API calls via the existing query/mutation hooks in `useQueries.ts`. On the admin login page, after a successful `adminLogin` call, update AuthContext state to reflect the admin session and navigate to `/admin/dashboard`. Implement an `adminLogout` function in AuthContext that clears the admin session token from state and localStorage and redirects to `/admin/login`.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/contexts/AuthContext.tsx",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/App.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/contexts/AuthContext.tsx",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/App.tsx"
+        ]
+      },
+      {
+        "id": "REQ-54",
+        "summary": "Add a navigation link to the Admin Login page (`/admin/login`) on the main Login page and/or Landing page, visually distinguished as 'Admin Portal' or 'Admin Login'. The link must be subtle (not prominent) to avoid drawing regular users to the admin portal, but must be discoverable for administrators. On the Admin Login page, include a link back to the regular user login page.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/Login.tsx",
+          "frontend/src/pages/admin/AdminLogin.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/Login.tsx",
+          "frontend/src/pages/admin/AdminLogin.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/Navbar.tsx",
+    "frontend/src/App.tsx",
+    "frontend/src/contexts/AuthContext.tsx",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/Login.tsx",
+    "frontend/src/pages/admin/AdminLogin.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",
