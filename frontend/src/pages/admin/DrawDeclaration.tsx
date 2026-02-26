@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, Loader2, Hash } from 'lucide-react';
+import { Trophy, Loader2, Hash, TrendingUp, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-// Fix: renamed useDeclareDraw → useDeclareWinner to match the hook export
 import { useListActiveLotteryPools, useGetDrawResult, useDeclareWinner, type WinnerRecord } from '../../hooks/useQueries';
 import { formatCoins } from '../../lib/utils';
 
@@ -34,9 +33,30 @@ function getRankLabel(rank: number) {
   }
 }
 
+interface PrizeBreakdownRowProps {
+  label: string;
+  value: string;
+  highlight?: 'gold' | 'silver' | 'bronze' | 'profit' | 'default';
+}
+
+function PrizeBreakdownRow({ label, value, highlight = 'default' }: PrizeBreakdownRowProps) {
+  const valueClass =
+    highlight === 'gold' ? 'text-yellow-500 font-bold' :
+    highlight === 'silver' ? 'text-gray-400 font-bold' :
+    highlight === 'bronze' ? 'text-amber-700 font-bold' :
+    highlight === 'profit' ? 'text-amber-500 font-bold' :
+    'text-foreground font-semibold';
+
+  return (
+    <div className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className={`text-sm ${valueClass}`}>{value}</span>
+    </div>
+  );
+}
+
 export default function DrawDeclaration() {
   const { data: lotteries, isLoading: lotteriesLoading } = useListActiveLotteryPools();
-  // Fix: use useDeclareWinner (correct hook name)
   const declareDraw = useDeclareWinner();
 
   const [selectedLotteryId, setSelectedLotteryId] = useState('');
@@ -152,6 +172,7 @@ export default function DrawDeclaration() {
             <p className="text-muted-foreground text-center py-4">No results yet.</p>
           ) : (
             <div className="space-y-4">
+              {/* Winning Number */}
               <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-xl px-4 py-3">
                 <Hash className="w-5 h-5 text-primary" />
                 <span className="text-sm text-muted-foreground">Winning Number:</span>
@@ -159,6 +180,8 @@ export default function DrawDeclaration() {
                   {String(Number(drawResult.winningNumber)).padStart(6, '0')}
                 </span>
               </div>
+
+              {/* Basic Stats */}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="bg-background border border-border rounded-xl p-3 text-center">
                   <p className="text-muted-foreground text-xs">Total Tickets</p>
@@ -169,10 +192,60 @@ export default function DrawDeclaration() {
                   <p className="font-bold text-primary">{formatCoins(Number(drawResult.totalPrizeDistributed))}</p>
                 </div>
               </div>
+
+              {/* Prize Distribution Breakdown */}
+              <div className="bg-background border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <DollarSign className="w-4 h-4 text-primary" />
+                  <h3 className="font-semibold text-foreground text-sm">Prize Distribution Breakdown</h3>
+                </div>
+                <div className="space-y-0">
+                  {drawResult.systemProfitRetained !== undefined && (
+                    <PrizeBreakdownRow
+                      label="💰 System Profit Retained"
+                      value={`${formatCoins(Number(drawResult.systemProfitRetained))}`}
+                      highlight="profit"
+                    />
+                  )}
+                  {drawResult.firstPrizeCredited !== undefined && (
+                    <PrizeBreakdownRow
+                      label="🥇 1st Place Prize"
+                      value={`${formatCoins(Number(drawResult.firstPrizeCredited))}`}
+                      highlight="gold"
+                    />
+                  )}
+                  {drawResult.secondPrizeCredited !== undefined && (
+                    <PrizeBreakdownRow
+                      label="🥈 2nd Place Prize"
+                      value={`${formatCoins(Number(drawResult.secondPrizeCredited))}`}
+                      highlight="silver"
+                    />
+                  )}
+                  {drawResult.thirdPrizeCredited !== undefined && (
+                    <PrizeBreakdownRow
+                      label="🥉 3rd Place Prize"
+                      value={`${formatCoins(Number(drawResult.thirdPrizeCredited))}`}
+                      highlight="bronze"
+                    />
+                  )}
+                  {drawResult.otherWinnersPerPrize !== undefined && Number(drawResult.otherWinnersPerPrize) > 0 && (
+                    <PrizeBreakdownRow
+                      label="🎖️ Per-winner Prize (4th+)"
+                      value={`${formatCoins(Number(drawResult.otherWinnersPerPrize))}`}
+                      highlight="default"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Winners List */}
               {drawResult.winners && drawResult.winners.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="font-semibold text-foreground text-sm">Winners</h3>
-                  {drawResult.winners.slice(0, 3).map((winner: WinnerRecord, idx: number) => {
+                  <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                    Winners ({drawResult.winners.length})
+                  </h3>
+                  {drawResult.winners.map((winner: WinnerRecord, idx: number) => {
                     const rankNum = Number(winner.rank);
                     return (
                       <div
@@ -187,6 +260,12 @@ export default function DrawDeclaration() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {drawResult.winners && drawResult.winners.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  No winners for this draw.
                 </div>
               )}
             </div>

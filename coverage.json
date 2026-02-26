@@ -1,68 +1,31 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-25T22:55:26.933Z",
+  "generatedAt": "2026-02-26T00:58:06.606Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 5,
-    "implemented": 3,
+    "total": 2,
+    "implemented": 1,
     "items": [
       {
-        "id": "REQ-50",
-        "summary": "Create a dedicated Admin Login page at `/admin/login` that is visually and functionally separate from the regular user login page. The page must display an 'Admin Portal' heading, an admin ID input field, a password input field, and a 'Sign In as Admin' submit button. On submission, validate credentials against the backend and, on success, store the admin session and redirect to `/admin/dashboard`. On failure, show an inline error message ('Invalid admin credentials'). The page must be accessible without authentication and must NOT use Internet Identity — it uses a separate admin ID + password flow.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/pages/admin/AdminLogin.tsx",
-          "frontend/src/App.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/pages/admin/AdminLogin.tsx",
-          "frontend/src/App.tsx"
-        ]
-      },
-      {
-        "id": "REQ-51",
-        "summary": "Add a backend Motoko endpoint `adminLogin(adminId: Text, password: Text)` in the main actor that validates the provided admin ID and password against a stored admin credential record (hashed password). On success, generate and return a short-lived admin session token (random 32-byte hex string) stored in a stable HashMap keyed by token with the admin's principal/userId and an expiry timestamp. On failure, return `#err(#invalidCredentials)`. Add a stable variable for admin credentials (a single hardcoded admin ID with a hashed password set at deploy time, configurable via an `initAdminCredentials` function callable only once or only by the canister controller).",
+        "id": "REQ-64",
+        "summary": "Update the `createLottery` backend endpoint in `backend/main.mo` to change the maximum allowed `winnerPayoutPercent` from 70 to 90. The validation must reject values greater than 90 (returning `#err(#invalidPrizeConfig)`) but allow any value from 1 to 90 inclusive. This ensures the system retains at least 10% profit instead of the previously enforced 30%.",
         "status": "unknown",
         "plannedFiles": [],
         "matchedFiles": []
       },
       {
-        "id": "REQ-52",
-        "summary": "Update all existing admin-only backend endpoints to accept and validate the admin session token (returned by `adminLogin`) as an additional authorization check, in addition to the existing role check. If the admin session token is missing, expired, or invalid, return `#err(#unauthorized)`. This ensures that even if a non-admin user somehow obtains a session, they cannot call admin endpoints without a valid admin session token.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
-      },
-      {
-        "id": "REQ-53",
-        "summary": "Store the admin session token returned by `adminLogin` in the frontend AuthContext (and localStorage under a key such as `adminSessionToken`). Pass this token to all admin API calls via the existing query/mutation hooks in `useQueries.ts`. On the admin login page, after a successful `adminLogin` call, update AuthContext state to reflect the admin session and navigate to `/admin/dashboard`. Implement an `adminLogout` function in AuthContext that clears the admin session token from state and localStorage and redirects to `/admin/login`.",
+        "id": "REQ-65",
+        "summary": "Update the Admin Lottery Management page (`frontend/src/pages/admin/LotteryManagement.tsx`) to change the inline validation for the 'Winner Payout %' field: allow values from 1 to 90 (not 1 to 70). Update the helper text label from 'System retains (100 - this value)% as profit. Max 70%' to 'System retains (100 - this value)% as profit. Max 90%'. Show an inline validation error only if `winnerPayoutPercent > 90` (not > 70). Update the calculated summary label 'System Profit' to reflect the correct retained percentage based on the entered value.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/contexts/AuthContext.tsx",
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/App.tsx"
+          "frontend/src/pages/admin/LotteryManagement.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/contexts/AuthContext.tsx",
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/App.tsx"
-        ]
-      },
-      {
-        "id": "REQ-54",
-        "summary": "Add a navigation link to the Admin Login page (`/admin/login`) on the main Login page and/or Landing page, visually distinguished as 'Admin Portal' or 'Admin Login'. The link must be subtle (not prominent) to avoid drawing regular users to the admin portal, but must be discoverable for administrators. On the Admin Login page, include a link back to the regular user login page.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/pages/Login.tsx",
-          "frontend/src/pages/admin/AdminLogin.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/pages/Login.tsx",
-          "frontend/src/pages/admin/AdminLogin.tsx"
+          "frontend/src/pages/admin/LotteryManagement.tsx"
         ]
       }
     ]
@@ -73,11 +36,11 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/App.tsx",
-    "frontend/src/contexts/AuthContext.tsx",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/Login.tsx",
-    "frontend/src/pages/admin/AdminLogin.tsx",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/pages/admin/LotteryManagement.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

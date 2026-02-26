@@ -89,6 +89,55 @@ export class ExternalBlob {
         return this;
     }
 }
+export type Time = bigint;
+export interface CreateLotteryData {
+    lotteryType: LotteryType;
+    ticketsPerUserMax: bigint;
+    logo?: ExternalBlob;
+    name: string;
+    firstPrizeRatio: bigint;
+    description: string;
+    drawTime: Time;
+    firstPrizePercent: bigint;
+    thirdPrizePercent: bigint;
+    maxTickets: bigint;
+    secondPrizeRatio: bigint;
+    secondPrizePercent: bigint;
+    winnerPayoutPercent: bigint;
+    ticketPrice: bigint;
+    thirdPrizeRatio: bigint;
+    drawInterval: DrawInterval;
+}
+export interface _CaffeineStorageRefillInformation {
+    proposed_top_up_amount?: bigint;
+}
+export interface _CaffeineStorageCreateCertificateResult {
+    method: string;
+    blob_hash: string;
+}
+export interface LotteryPool {
+    id: string;
+    status: LotteryStatus;
+    totalTicketsSold: bigint;
+    lotteryType: LotteryType;
+    ticketsPerUserMax: bigint;
+    logo?: ExternalBlob;
+    name: string;
+    createdAt: Time;
+    firstPrizeRatio: bigint;
+    description: string;
+    drawTime: Time;
+    firstPrizePercent: bigint;
+    thirdPrizePercent: bigint;
+    maxTickets: bigint;
+    secondPrizeRatio: bigint;
+    secondPrizePercent: bigint;
+    totalPoolAmount: bigint;
+    winnerPayoutPercent: bigint;
+    ticketPrice: bigint;
+    thirdPrizeRatio: bigint;
+    drawInterval: DrawInterval;
+}
 export interface UserProfile {
     id: string;
     referralCode: string;
@@ -101,17 +150,32 @@ export interface UserProfile {
     coinsBalance: bigint;
     isVerified: boolean;
 }
-export interface _CaffeineStorageCreateCertificateResult {
-    method: string;
-    blob_hash: string;
-}
-export type Time = bigint;
 export interface _CaffeineStorageRefillResult {
     success?: boolean;
     topped_up_amount?: bigint;
 }
-export interface _CaffeineStorageRefillInformation {
-    proposed_top_up_amount?: bigint;
+export enum CreateLotteryError {
+    invalidTicketConfig = "invalidTicketConfig",
+    invalidPrizeConfig = "invalidPrizeConfig",
+    invalidDrawTime = "invalidDrawTime",
+    unauthorized = "unauthorized"
+}
+export enum DrawInterval {
+    h1 = "h1",
+    h3 = "h3",
+    h5 = "h5",
+    h12 = "h12",
+    daily = "daily",
+    weekly = "weekly"
+}
+export enum LotteryStatus {
+    active = "active",
+    cancelled = "cancelled",
+    completed = "completed"
+}
+export enum LotteryType {
+    daily = "daily",
+    weekly = "weekly"
 }
 export enum UserRole {
     admin = "admin",
@@ -131,6 +195,13 @@ export interface backendInterface {
     _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    createLottery(data: CreateLotteryData): Promise<{
+        __kind__: "ok";
+        ok: LotteryPool;
+    } | {
+        __kind__: "err";
+        err: CreateLotteryError;
+    }>;
     getCallerUserProfile(): Promise<{
         __kind__: "ok";
         ok: UserProfile;
@@ -143,7 +214,7 @@ export interface backendInterface {
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
 }
-import type { Time as _Time, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
+import type { CreateLotteryData as _CreateLotteryData, CreateLotteryError as _CreateLotteryError, DrawInterval as _DrawInterval, ExternalBlob as _ExternalBlob, LotteryPool as _LotteryPool, LotteryStatus as _LotteryStatus, LotteryType as _LotteryType, Time as _Time, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
@@ -258,6 +329,26 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async createLottery(arg0: CreateLotteryData): Promise<{
+        __kind__: "ok";
+        ok: LotteryPool;
+    } | {
+        __kind__: "err";
+        err: CreateLotteryError;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createLottery(await to_candid_CreateLotteryData_n10(this._uploadFile, this._downloadFile, arg0));
+                return from_candid_variant_n17(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createLottery(await to_candid_CreateLotteryData_n10(this._uploadFile, this._downloadFile, arg0));
+            return from_candid_variant_n17(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async getCallerUserProfile(): Promise<{
         __kind__: "ok";
         ok: UserProfile;
@@ -268,42 +359,42 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserProfile();
-                return from_candid_variant_n10(this._uploadFile, this._downloadFile, result);
+                return from_candid_variant_n30(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserProfile();
-            return from_candid_variant_n10(this._uploadFile, this._downloadFile, result);
+            return from_candid_variant_n30(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserRole(): Promise<UserRole> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserRole();
-                return from_candid_UserRole_n15(this._uploadFile, this._downloadFile, result);
+                return from_candid_UserRole_n35(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserRole();
-            return from_candid_UserRole_n15(this._uploadFile, this._downloadFile, result);
+            return from_candid_UserRole_n35(this._uploadFile, this._downloadFile, result);
         }
     }
     async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getUserProfile(arg0);
-                return from_candid_opt_n17(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n37(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getUserProfile(arg0);
-            return from_candid_opt_n17(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n37(this._uploadFile, this._downloadFile, result);
         }
     }
     async isCallerAdmin(): Promise<boolean> {
@@ -323,32 +414,53 @@ export class Backend implements backendInterface {
     async saveCallerUserProfile(arg0: UserProfile): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n18(this._uploadFile, this._downloadFile, arg0));
+                const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n38(this._uploadFile, this._downloadFile, arg0));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n18(this._uploadFile, this._downloadFile, arg0));
+            const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n38(this._uploadFile, this._downloadFile, arg0));
             return result;
         }
     }
 }
-function from_candid_UserProfile_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserProfile): UserProfile {
-    return from_candid_record_n12(_uploadFile, _downloadFile, value);
+function from_candid_CreateLotteryError_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CreateLotteryError): CreateLotteryError {
+    return from_candid_variant_n29(_uploadFile, _downloadFile, value);
 }
-function from_candid_UserRole_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
-    return from_candid_variant_n16(_uploadFile, _downloadFile, value);
+function from_candid_DrawInterval_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _DrawInterval): DrawInterval {
+    return from_candid_variant_n27(_uploadFile, _downloadFile, value);
+}
+async function from_candid_ExternalBlob_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ExternalBlob): Promise<ExternalBlob> {
+    return await _downloadFile(value);
+}
+async function from_candid_LotteryPool_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _LotteryPool): Promise<LotteryPool> {
+    return await from_candid_record_n19(_uploadFile, _downloadFile, value);
+}
+function from_candid_LotteryStatus_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _LotteryStatus): LotteryStatus {
+    return from_candid_variant_n21(_uploadFile, _downloadFile, value);
+}
+function from_candid_LotteryType_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _LotteryType): LotteryType {
+    return from_candid_variant_n23(_uploadFile, _downloadFile, value);
+}
+function from_candid_UserProfile_n31(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserProfile): UserProfile {
+    return from_candid_record_n32(_uploadFile, _downloadFile, value);
+}
+function from_candid_UserRole_n35(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
+    return from_candid_variant_n36(_uploadFile, _downloadFile, value);
 }
 function from_candid__CaffeineStorageRefillResult_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: __CaffeineStorageRefillResult): _CaffeineStorageRefillResult {
     return from_candid_record_n5(_uploadFile, _downloadFile, value);
 }
-function from_candid_opt_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Time]): Time | null {
+async function from_candid_opt_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ExternalBlob]): Promise<ExternalBlob | null> {
+    return value.length === 0 ? null : await from_candid_ExternalBlob_n25(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n33(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Time]): Time | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
-    return value.length === 0 ? null : from_candid_UserProfile_n11(_uploadFile, _downloadFile, value[0]);
+function from_candid_opt_n37(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
+    return value.length === 0 ? null : from_candid_UserProfile_n31(_uploadFile, _downloadFile, value[0]);
 }
 function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [boolean]): boolean | null {
     return value.length === 0 ? null : value[0];
@@ -356,7 +468,76 @@ function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Ar
 function from_candid_opt_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_record_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+async function from_candid_record_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: string;
+    status: _LotteryStatus;
+    totalTicketsSold: bigint;
+    lotteryType: _LotteryType;
+    ticketsPerUserMax: bigint;
+    logo: [] | [_ExternalBlob];
+    name: string;
+    createdAt: _Time;
+    firstPrizeRatio: bigint;
+    description: string;
+    drawTime: _Time;
+    firstPrizePercent: bigint;
+    thirdPrizePercent: bigint;
+    maxTickets: bigint;
+    secondPrizeRatio: bigint;
+    secondPrizePercent: bigint;
+    totalPoolAmount: bigint;
+    winnerPayoutPercent: bigint;
+    ticketPrice: bigint;
+    thirdPrizeRatio: bigint;
+    drawInterval: _DrawInterval;
+}): Promise<{
+    id: string;
+    status: LotteryStatus;
+    totalTicketsSold: bigint;
+    lotteryType: LotteryType;
+    ticketsPerUserMax: bigint;
+    logo?: ExternalBlob;
+    name: string;
+    createdAt: Time;
+    firstPrizeRatio: bigint;
+    description: string;
+    drawTime: Time;
+    firstPrizePercent: bigint;
+    thirdPrizePercent: bigint;
+    maxTickets: bigint;
+    secondPrizeRatio: bigint;
+    secondPrizePercent: bigint;
+    totalPoolAmount: bigint;
+    winnerPayoutPercent: bigint;
+    ticketPrice: bigint;
+    thirdPrizeRatio: bigint;
+    drawInterval: DrawInterval;
+}> {
+    return {
+        id: value.id,
+        status: from_candid_LotteryStatus_n20(_uploadFile, _downloadFile, value.status),
+        totalTicketsSold: value.totalTicketsSold,
+        lotteryType: from_candid_LotteryType_n22(_uploadFile, _downloadFile, value.lotteryType),
+        ticketsPerUserMax: value.ticketsPerUserMax,
+        logo: record_opt_to_undefined(await from_candid_opt_n24(_uploadFile, _downloadFile, value.logo)),
+        name: value.name,
+        createdAt: value.createdAt,
+        firstPrizeRatio: value.firstPrizeRatio,
+        description: value.description,
+        drawTime: value.drawTime,
+        firstPrizePercent: value.firstPrizePercent,
+        thirdPrizePercent: value.thirdPrizePercent,
+        maxTickets: value.maxTickets,
+        secondPrizeRatio: value.secondPrizeRatio,
+        secondPrizePercent: value.secondPrizePercent,
+        totalPoolAmount: value.totalPoolAmount,
+        winnerPayoutPercent: value.winnerPayoutPercent,
+        ticketPrice: value.ticketPrice,
+        thirdPrizeRatio: value.thirdPrizeRatio,
+        drawInterval: from_candid_DrawInterval_n26(_uploadFile, _downloadFile, value.drawInterval)
+    };
+}
+function from_candid_record_n32(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: string;
     referralCode: string;
     isBlocked: boolean;
@@ -386,7 +567,7 @@ function from_candid_record_n12(_uploadFile: (file: ExternalBlob) => Promise<Uin
         name: value.name,
         createdAt: value.createdAt,
         role: value.role,
-        blockedAt: record_opt_to_undefined(from_candid_opt_n13(_uploadFile, _downloadFile, value.blockedAt)),
+        blockedAt: record_opt_to_undefined(from_candid_opt_n33(_uploadFile, _downloadFile, value.blockedAt)),
         email: value.email,
         coinsBalance: value.coinsBalance,
         isVerified: value.isVerified
@@ -404,7 +585,68 @@ function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint
         topped_up_amount: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.topped_up_amount))
     };
 }
-function from_candid_variant_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+async function from_candid_variant_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: _LotteryPool;
+} | {
+    err: _CreateLotteryError;
+}): Promise<{
+    __kind__: "ok";
+    ok: LotteryPool;
+} | {
+    __kind__: "err";
+    err: CreateLotteryError;
+}> {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: await from_candid_LotteryPool_n18(_uploadFile, _downloadFile, value.ok)
+    } : "err" in value ? {
+        __kind__: "err",
+        err: from_candid_CreateLotteryError_n28(_uploadFile, _downloadFile, value.err)
+    } : value;
+}
+function from_candid_variant_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    active: null;
+} | {
+    cancelled: null;
+} | {
+    completed: null;
+}): LotteryStatus {
+    return "active" in value ? LotteryStatus.active : "cancelled" in value ? LotteryStatus.cancelled : "completed" in value ? LotteryStatus.completed : value;
+}
+function from_candid_variant_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    daily: null;
+} | {
+    weekly: null;
+}): LotteryType {
+    return "daily" in value ? LotteryType.daily : "weekly" in value ? LotteryType.weekly : value;
+}
+function from_candid_variant_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    h1: null;
+} | {
+    h3: null;
+} | {
+    h5: null;
+} | {
+    h12: null;
+} | {
+    daily: null;
+} | {
+    weekly: null;
+}): DrawInterval {
+    return "h1" in value ? DrawInterval.h1 : "h3" in value ? DrawInterval.h3 : "h5" in value ? DrawInterval.h5 : "h12" in value ? DrawInterval.h12 : "daily" in value ? DrawInterval.daily : "weekly" in value ? DrawInterval.weekly : value;
+}
+function from_candid_variant_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    invalidTicketConfig: null;
+} | {
+    invalidPrizeConfig: null;
+} | {
+    invalidDrawTime: null;
+} | {
+    unauthorized: null;
+}): CreateLotteryError {
+    return "invalidTicketConfig" in value ? CreateLotteryError.invalidTicketConfig : "invalidPrizeConfig" in value ? CreateLotteryError.invalidPrizeConfig : "invalidDrawTime" in value ? CreateLotteryError.invalidDrawTime : "unauthorized" in value ? CreateLotteryError.unauthorized : value;
+}
+function from_candid_variant_n30(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     ok: _UserProfile;
 } | {
     err: {
@@ -421,20 +663,20 @@ function from_candid_variant_n10(_uploadFile: (file: ExternalBlob) => Promise<Ui
 } {
     return "ok" in value ? {
         __kind__: "ok",
-        ok: from_candid_UserProfile_n11(_uploadFile, _downloadFile, value.ok)
+        ok: from_candid_UserProfile_n31(_uploadFile, _downloadFile, value.ok)
     } : "err" in value ? {
         __kind__: "err",
-        err: from_candid_variant_n14(_uploadFile, _downloadFile, value.err)
+        err: from_candid_variant_n34(_uploadFile, _downloadFile, value.err)
     } : value;
 }
-function from_candid_variant_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n34(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     notFound: null;
 } | {
     unauthorized: null;
 }): Variant_notFound_unauthorized {
     return "notFound" in value ? Variant_notFound_unauthorized.notFound : "unauthorized" in value ? Variant_notFound_unauthorized.unauthorized : value;
 }
-function from_candid_variant_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n36(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     admin: null;
 } | {
     user: null;
@@ -443,8 +685,20 @@ function from_candid_variant_n16(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): UserRole {
     return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
 }
-function to_candid_UserProfile_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserProfile): _UserProfile {
-    return to_candid_record_n19(_uploadFile, _downloadFile, value);
+async function to_candid_CreateLotteryData_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: CreateLotteryData): Promise<_CreateLotteryData> {
+    return await to_candid_record_n11(_uploadFile, _downloadFile, value);
+}
+function to_candid_DrawInterval_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: DrawInterval): _DrawInterval {
+    return to_candid_variant_n16(_uploadFile, _downloadFile, value);
+}
+async function to_candid_ExternalBlob_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ExternalBlob): Promise<_ExternalBlob> {
+    return await _uploadFile(value);
+}
+function to_candid_LotteryType_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: LotteryType): _LotteryType {
+    return to_candid_variant_n13(_uploadFile, _downloadFile, value);
+}
+function to_candid_UserProfile_n38(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserProfile): _UserProfile {
+    return to_candid_record_n39(_uploadFile, _downloadFile, value);
 }
 function to_candid_UserRole_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
     return to_candid_variant_n9(_uploadFile, _downloadFile, value);
@@ -455,7 +709,70 @@ function to_candid__CaffeineStorageRefillInformation_n2(_uploadFile: (file: Exte
 function to_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CaffeineStorageRefillInformation | null): [] | [__CaffeineStorageRefillInformation] {
     return value === null ? candid_none() : candid_some(to_candid__CaffeineStorageRefillInformation_n2(_uploadFile, _downloadFile, value));
 }
-function to_candid_record_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+async function to_candid_record_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    lotteryType: LotteryType;
+    ticketsPerUserMax: bigint;
+    logo?: ExternalBlob;
+    name: string;
+    firstPrizeRatio: bigint;
+    description: string;
+    drawTime: Time;
+    firstPrizePercent: bigint;
+    thirdPrizePercent: bigint;
+    maxTickets: bigint;
+    secondPrizeRatio: bigint;
+    secondPrizePercent: bigint;
+    winnerPayoutPercent: bigint;
+    ticketPrice: bigint;
+    thirdPrizeRatio: bigint;
+    drawInterval: DrawInterval;
+}): Promise<{
+    lotteryType: _LotteryType;
+    ticketsPerUserMax: bigint;
+    logo: [] | [_ExternalBlob];
+    name: string;
+    firstPrizeRatio: bigint;
+    description: string;
+    drawTime: _Time;
+    firstPrizePercent: bigint;
+    thirdPrizePercent: bigint;
+    maxTickets: bigint;
+    secondPrizeRatio: bigint;
+    secondPrizePercent: bigint;
+    winnerPayoutPercent: bigint;
+    ticketPrice: bigint;
+    thirdPrizeRatio: bigint;
+    drawInterval: _DrawInterval;
+}> {
+    return {
+        lotteryType: to_candid_LotteryType_n12(_uploadFile, _downloadFile, value.lotteryType),
+        ticketsPerUserMax: value.ticketsPerUserMax,
+        logo: value.logo ? candid_some(await to_candid_ExternalBlob_n14(_uploadFile, _downloadFile, value.logo)) : candid_none(),
+        name: value.name,
+        firstPrizeRatio: value.firstPrizeRatio,
+        description: value.description,
+        drawTime: value.drawTime,
+        firstPrizePercent: value.firstPrizePercent,
+        thirdPrizePercent: value.thirdPrizePercent,
+        maxTickets: value.maxTickets,
+        secondPrizeRatio: value.secondPrizeRatio,
+        secondPrizePercent: value.secondPrizePercent,
+        winnerPayoutPercent: value.winnerPayoutPercent,
+        ticketPrice: value.ticketPrice,
+        thirdPrizeRatio: value.thirdPrizeRatio,
+        drawInterval: to_candid_DrawInterval_n15(_uploadFile, _downloadFile, value.drawInterval)
+    };
+}
+function to_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    proposed_top_up_amount?: bigint;
+}): {
+    proposed_top_up_amount: [] | [bigint];
+} {
+    return {
+        proposed_top_up_amount: value.proposed_top_up_amount ? candid_some(value.proposed_top_up_amount) : candid_none()
+    };
+}
+function to_candid_record_n39(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: string;
     referralCode: string;
     isBlocked: boolean;
@@ -491,14 +808,43 @@ function to_candid_record_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8
         isVerified: value.isVerified
     };
 }
-function to_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    proposed_top_up_amount?: bigint;
-}): {
-    proposed_top_up_amount: [] | [bigint];
+function to_candid_variant_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: LotteryType): {
+    daily: null;
+} | {
+    weekly: null;
 } {
-    return {
-        proposed_top_up_amount: value.proposed_top_up_amount ? candid_some(value.proposed_top_up_amount) : candid_none()
-    };
+    return value == LotteryType.daily ? {
+        daily: null
+    } : value == LotteryType.weekly ? {
+        weekly: null
+    } : value;
+}
+function to_candid_variant_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: DrawInterval): {
+    h1: null;
+} | {
+    h3: null;
+} | {
+    h5: null;
+} | {
+    h12: null;
+} | {
+    daily: null;
+} | {
+    weekly: null;
+} {
+    return value == DrawInterval.h1 ? {
+        h1: null
+    } : value == DrawInterval.h3 ? {
+        h3: null
+    } : value == DrawInterval.h5 ? {
+        h5: null
+    } : value == DrawInterval.h12 ? {
+        h12: null
+    } : value == DrawInterval.daily ? {
+        daily: null
+    } : value == DrawInterval.weekly ? {
+        weekly: null
+    } : value;
 }
 function to_candid_variant_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
     admin: null;

@@ -4,8 +4,8 @@ import Map "mo:core/Map";
 import Runtime "mo:core/Runtime";
 import Text "mo:core/Text";
 import Time "mo:core/Time";
-import Nat "mo:core/Nat";
 import Principal "mo:core/Principal";
+import Nat "mo:core/Nat";
 import Int "mo:core/Int";
 import Storage "blob-storage/Storage";
 import MixinStorage "blob-storage/Mixin";
@@ -114,6 +114,10 @@ actor {
     firstPrizeRatio : Nat;
     secondPrizeRatio : Nat;
     thirdPrizeRatio : Nat;
+    winnerPayoutPercent : Nat;
+    firstPrizePercent : Nat;
+    secondPrizePercent : Nat;
+    thirdPrizePercent : Nat;
     createdAt : Time.Time;
   };
 
@@ -184,6 +188,11 @@ actor {
     totalPrizeDistributed : Nat;
     drawTime : Time.Time;
     winners : [WinnerRecord];
+    systemProfitRetained : Nat;
+    firstPrizeCredited : Nat;
+    secondPrizeCredited : Nat;
+    thirdPrizeCredited : Nat;
+    otherWinnersPerPrize : Nat;
   };
 
   public type LotteryLiveStats = {
@@ -214,6 +223,10 @@ actor {
     firstPrizeRatio : Nat;
     secondPrizeRatio : Nat;
     thirdPrizeRatio : Nat;
+    winnerPayoutPercent : Nat;
+    firstPrizePercent : Nat;
+    secondPrizePercent : Nat;
+    thirdPrizePercent : Nat;
   };
 
   public type UpdateLotteryData = {
@@ -275,12 +288,12 @@ actor {
     timestamp : Time.Time;
   };
 
-  // ===== AUTH =====
-
-  // Rely on system principal
-  // func getCallerPrincipal({ caller }) {
-  //   caller;
-  // };
+  public type CreateLotteryError = {
+    #unauthorized;
+    #invalidPrizeConfig;
+    #invalidTicketConfig;
+    #invalidDrawTime;
+  };
 
   // ===== STABLE STATE =====
 
@@ -591,5 +604,71 @@ actor {
       };
       case null { null };
     };
+  };
+
+  // ===== LOTTERY MANAGEMENT =====
+
+  // createLottery: admin-only endpoint to create a new lottery pool.
+  // winnerPayoutPercent must be between 1 and 90 inclusive, ensuring the system
+  // retains at least 10% profit.
+  public shared ({ caller }) func createLottery(data : CreateLotteryData) : async {
+    #ok : LotteryPool;
+    #err : CreateLotteryError;
+  } {
+    // Only admins may create lottery pools
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      return #err(#unauthorized);
+    };
+
+    // Validate winnerPayoutPercent: must be between 1 and 90 inclusive
+    if (data.winnerPayoutPercent == 0 or data.winnerPayoutPercent > 90) {
+      return #err(#invalidPrizeConfig);
+    };
+
+    // Validate prize percentages sum to 100
+    let prizeSum = data.firstPrizePercent + data.secondPrizePercent + data.thirdPrizePercent;
+    if (prizeSum != 100) {
+      return #err(#invalidPrizeConfig);
+    };
+
+    // Validate ticket configuration
+    if (data.ticketPrice == 0 or data.maxTickets == 0 or data.ticketsPerUserMax == 0) {
+      return #err(#invalidTicketConfig);
+    };
+    if (data.ticketsPerUserMax > data.maxTickets) {
+      return #err(#invalidTicketConfig);
+    };
+
+    // Validate draw time is in the future
+    if (data.drawTime <= Time.now()) {
+      return #err(#invalidDrawTime);
+    };
+
+    let poolId = genLotteryPoolId();
+    let pool : LotteryPool = {
+      id = poolId;
+      name = data.name;
+      lotteryType = data.lotteryType;
+      drawInterval = data.drawInterval;
+      ticketPrice = data.ticketPrice;
+      maxTickets = data.maxTickets;
+      ticketsPerUserMax = data.ticketsPerUserMax;
+      drawTime = data.drawTime;
+      status = #active;
+      totalTicketsSold = 0;
+      totalPoolAmount = 0;
+      description = data.description;
+      logo = data.logo;
+      firstPrizeRatio = data.firstPrizeRatio;
+      secondPrizeRatio = data.secondPrizeRatio;
+      thirdPrizeRatio = data.thirdPrizeRatio;
+      winnerPayoutPercent = data.winnerPayoutPercent;
+      firstPrizePercent = data.firstPrizePercent;
+      secondPrizePercent = data.secondPrizePercent;
+      thirdPrizePercent = data.thirdPrizePercent;
+      createdAt = Time.now();
+    };
+    lotteryPools.add(poolId, pool);
+    #ok(pool);
   };
 };

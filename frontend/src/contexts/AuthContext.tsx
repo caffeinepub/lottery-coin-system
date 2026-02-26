@@ -10,16 +10,19 @@ const ADMIN_SESSION_EXPIRY_KEY = 'adminSessionExpiry';
 // Admin session duration: 8 hours
 const ADMIN_SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
 
-// Hardcoded admin credentials (hashed comparison)
-// Admin ID: "luckycoins_admin" | Password: "Admin@LuckyCoins2024!"
-// In production these would come from a secure backend endpoint
-const ADMIN_ID = 'luckycoins_admin';
-const ADMIN_PASSWORD_HASH = 'a3f8b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1';
+// Default admin credentials:
+// Admin ID: "admin" | Password: "admin123"
+// The frontend hashes the provided password with SHA-256 (no salt) and compares
+// it to the SHA-256 hash of the expected plaintext password using the same function.
+const ADMIN_ID = 'admin';
+const ADMIN_EXPECTED_PASSWORD = 'admin123';
 
-// Simple hash function for client-side credential verification
-async function hashString(input: string): Promise<string> {
+// Hash function: SHA-256, no salt, lowercase hex output.
+// Both the stored expected hash and the runtime hash use this same function,
+// so the comparison is always consistent.
+async function hashPassword(input: string): Promise<string> {
   const encoder = new TextEncoder();
-  const data = encoder.encode(input + 'luckycoins_salt_2024');
+  const data = encoder.encode(input);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
@@ -78,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
 
-  // Admin session state
+  // Admin session state — restored from localStorage on init if not expired
   const [adminSessionToken, setAdminSessionToken] = useState<string | null>(() => {
     try {
       const token = localStorage.getItem(ADMIN_SESSION_KEY);
@@ -181,29 +184,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
   }, [fetchProfile, queryClient]);
 
-  // Admin login: validates credentials client-side and issues a local session token
+  // Admin login: validates credentials client-side using SHA-256 hashing (no salt).
+  // The frontend hashes the provided password and compares it to the hash of the
+  // expected plaintext password using the same hashPassword function — ensuring
+  // the stored hash and runtime hash are always identical for the same input.
+  // Default credentials: Admin ID = "admin", Password = "admin123"
   const adminLogin = useCallback(async (adminId: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Validate admin ID
+      // Validate admin ID (case-sensitive)
       if (adminId !== ADMIN_ID) {
         return { success: false, error: 'Invalid admin credentials' };
       }
 
-      // Hash the provided password and compare
-      const providedHash = await hashString(password);
-      // For the default password "Admin@LuckyCoins2024!" the hash is pre-computed
-      // We compare against the stored hash
-      const expectedHash = await hashString('Admin@LuckyCoins2024!');
+      // Hash the provided password and the expected password using the same function,
+      // then compare — this ensures consistency regardless of the stored hash value.
+      const providedHash = await hashPassword(password);
+      const expectedHash = await hashPassword(ADMIN_EXPECTED_PASSWORD);
 
       if (providedHash !== expectedHash) {
         return { success: false, error: 'Invalid admin credentials' };
       }
 
-      // Generate session token
+      // Generate session token and persist with expiry
       const token = generateSessionToken();
       const expiry = Date.now() + ADMIN_SESSION_DURATION_MS;
 
-      // Store in state and localStorage
       setAdminSessionToken(token);
       localStorage.setItem(ADMIN_SESSION_KEY, token);
       localStorage.setItem(ADMIN_SESSION_EXPIRY_KEY, expiry.toString());

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 19,
-  "summary": "Full-stack lottery coin system with React.js frontend, Node.js + Express backend, and MySQL database. Features include email OTP authentication, coin-based wallet, balance addition with admin approval, lottery ticket purchasing (6-digit hourly, 9-digit daily, 12-digit weekly jackpot draws with massive prize pools, plus 1h/3h/5h/12h timed draws), dynamic prize pools (fixed ticket price, fixed max tickets, max 50 tickets per user, draw on time even if not full, admin can create pools), live tracking of tickets sold/remaining/total pool, 90% revenue distribution to winners (minimum 70% win, tiered prizes for 1st/2nd/3rd), full result transparency, automated draw results with winner crediting, withdrawal system with admin approval, bonus/promotional system (admin bonus coins, first-user 90% discount, referral bonuses, limited-time discounts, cashback, loyalty rewards, festival campaigns), and a complete admin panel with user management (block/unblock, action logs).",
+  "projectStateVersion": 25,
+  "summary": "Full-stack lottery coin system with React.js frontend, Node.js + Express backend, and MySQL database. Features include email OTP authentication, coin-based wallet, balance addition with admin approval, lottery ticket purchasing (6-digit hourly, 9-digit daily, 12-digit weekly jackpot draws with massive prize pools, plus 1h/3h/5h/12h timed draws), dynamic prize pools (fixed ticket price, fixed max tickets, max 50 tickets per user, draw on time even if not full, admin can create pools), live tracking of tickets sold/remaining/total pool, configurable prize distribution (admin sets ticket price, total winner %, top 3 prize % — system auto-calculates prizes by rank with 1st/2nd/3rd getting fixed %, remaining distributed among other winners, 30% system profit retained), full result transparency, automated draw results with winner crediting, withdrawal system with admin approval, bonus/promotional system (admin bonus coins, first-user 90% discount, referral bonuses, limited-time discounts, cashback, loyalty rewards, festival campaigns), and a complete admin panel with user management (block/unblock, action logs).",
   "architectural_notes": [
     "Backend: Node.js + Express + MySQL with bcrypt, JWT, multer for file uploads, rate limiting, and CORS",
     "Frontend: React.js with Auth context, Wallet context, React Router protected routes, and toast notifications",
@@ -10,15 +10,17 @@
     "Background jobs handle OTP email sending, scheduled lottery draws, and automated winner crediting",
     "Role-based access control: user vs admin roles enforced via JWT middleware on all protected routes",
     "Lottery pools support multiple draw intervals (1h/3h/5h/12h/Daily/Weekly) with scheduled draws regardless of fill status; max 50 tickets per user per pool",
-    "Prize distribution: 90% revenue to winners, minimum 70% participants win, tiered 1st/2nd/3rd prizes, decreasing rewards based on tickets sold",
     "Lottery digit formats: 6-digit for hourly draws, 9-digit for daily draws, 12-digit for weekly jackpot draws",
-    "Bonus/promo system: admin_bonus, first_user_discount, referral_bonus, cashback, loyalty_reward, festival_campaign transaction types added to wallet; promo eligibility checks on ticket purchase"
+    "Bonus/promo system: admin_bonus, first_user_discount, referral_bonus, cashback, loyalty_reward, festival_campaign transaction types added to wallet; promo eligibility checks on ticket purchase",
+    "Prize distribution is fully configurable per pool: admin sets total winner %, 1st/2nd/3rd place %, remaining winners share the rest; 30% of pool revenue is system profit"
   ],
   "known_issues": [
     "Website and admin panel not rendering/displaying correctly after Version 3 deployment",
-    "'User Record Not Found' error appears on dashboard profile setup page after clicking 'Get Started' — user profile not being created/fetched correctly after authentication"
+    "'User Record Not Found' error appears on dashboard profile setup page after clicking 'Get Started' — user profile not being created/fetched correctly after authentication",
+    "Admin login at /admin/login returns 'Invalid admin credentials' even with correct admin/admin123 credentials — SHA-256 hash initialization at deploy time may not be matching the runtime hash comparison",
+    "Winner payout validation incorrectly caps at 70% instead of 90%, causing 'Failed to create lottery' error when admin sets winner payout between 71–90%"
   ],
-  "isFixRequest": false,
+  "isFixRequest": true,
   "existing_features": [
     {
       "id": "feature-build-the-react-frontend-with-react-router-for-navigation-and-the-following-pages-landing-home-register-with-otp-step-login-user-dashboard-coin-balance-active-lotteries-summary-lottery-list-buy-ticket-with-number-picker-for-3-digit-5-digit-or-auto-generate-for-jackpot-festival-my-tickets-add-balance-with-base64-image-capture-for-payment-proof-withdrawal-request-transaction-history-and-a-full-admin-section-with-sub-pages-admin-dashboard-balance-requests-management-withdrawal-management-lottery-management-create-edit-user-management-and-draw-results-declaration",
@@ -249,6 +251,38 @@
       "title": "Add a navigation link to the Admin Login page (`/admin/login`) on the main Login page and/or Landing page, visually distinguished as 'Admin Portal' or 'Admin Login'. The link must be subtle (not prominent) to avoid drawing regular users to the admin portal, but must be discoverable for administrators. On the Admin Login page, include a link back to the regular user login page.",
       "reqIds": [
         "REQ-54"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-audit-and-align-the-password-hashing-implementation-between-the-frontend-frontend-src-utils-validation-ts-or-frontend-src-contexts-authcontext-tsx-and-the-motoko-backend-backend-main-mo-both-must-use-the-same-sha-256-algorithm-and-produce-identical-hex-encoded-digest-strings-for-the-same-input-if-the-frontend-hashes-the-password-before-sending-it-to-adminlogin-the-backend-must-compare-against-a-hash-of-a-hash-i-e-the-stored-value-must-be-sha256-sha256-admin123-in-hex-if-the-backend-hashes-the-received-plaintext-the-stored-value-must-be-sha256-admin123-in-hex-and-the-frontend-must-send-the-plaintext-confirm-and-enforce-a-single-consistent-flow-so-that-credential-comparison-always-succeeds-for-correct-inputs",
+      "title": "Audit and align the password hashing implementation between the frontend (`frontend/src/utils/validation.ts` or `frontend/src/contexts/AuthContext.tsx`) and the Motoko backend (`backend/main.mo`). Both must use the same SHA-256 algorithm and produce identical hex-encoded digest strings for the same input. If the frontend hashes the password before sending it to `adminLogin`, the backend must compare against a hash of a hash (i.e., the stored value must be `SHA256(SHA256(\"admin123\"))` in hex). If the backend hashes the received plaintext, the stored value must be `SHA256(\"admin123\")` in hex and the frontend must send the plaintext. Confirm and enforce a single consistent flow so that credential comparison always succeeds for correct inputs.",
+      "reqIds": [
+        "REQ-56"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-admin-lottery-management-page-frontend-src-pages-admin-lotterymanagement-tsx-create-pool-form-to-include-four-new-fields-1-winner-payout-numeric-input-1-70-labeled-with-helper-text-system-retains-100-this-value-as-profit-max-70-2-1st-prize-numeric-input-representing-percentage-of-prize-pool-3-2nd-prize-numeric-input-representing-percentage-of-prize-pool-4-3rd-prize-numeric-input-representing-percentage-of-prize-pool-show-an-inline-validation-error-if-winnerpayoutpercent-70-or-if-the-sum-of-the-three-top-prize-percentages-100-display-a-read-only-calculated-summary-below-the-inputs-system-profit-x-1st-prize-y-coins-estimated-2nd-prize-z-coins-estimated-3rd-prize-w-coins-estimated-remaining-pool-for-other-winners-v-pass-all-four-values-to-the-createlottery-mutation",
+      "title": "Update the Admin Lottery Management page (`frontend/src/pages/admin/LotteryManagement.tsx`) create-pool form to include four new fields: (1) 'Winner Payout %' — numeric input (1–70), labeled with helper text 'System retains (100 - this value)% as profit. Max 70%'; (2) '1st Prize %' — numeric input representing percentage of prize pool; (3) '2nd Prize %' — numeric input representing percentage of prize pool; (4) '3rd Prize %' — numeric input representing percentage of prize pool. Show an inline validation error if `winnerPayoutPercent > 70` or if the sum of the three top-prize percentages ≥ 100. Display a read-only calculated summary below the inputs: 'System Profit: X%', '1st Prize: Y coins (estimated)', '2nd Prize: Z coins (estimated)', '3rd Prize: W coins (estimated)', 'Remaining pool for other winners: V%'. Pass all four values to the `createLottery` mutation.",
+      "reqIds": [
+        "REQ-61"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-admin-draw-declaration-page-frontend-src-pages-admin-drawdeclaration-tsx-results-summary-section-to-display-the-prize-distribution-breakdown-after-a-draw-is-declared-in-addition-to-existing-summary-fields-winning-number-total-tickets-sold-number-of-winners-total-prize-distributed-show-system-profit-retained-x-coins-1st-place-prize-y-coins-2nd-place-prize-z-coins-3rd-place-prize-w-coins-per-winner-prize-4th-v-coins-derive-these-values-from-the-draw-result-data-returned-by-declaredraw-or-getdrawresults",
+      "title": "Update the Admin Draw Declaration page (`frontend/src/pages/admin/DrawDeclaration.tsx`) results summary section to display the prize distribution breakdown after a draw is declared. In addition to existing summary fields (winning number, total tickets sold, number of winners, total prize distributed), show: 'System Profit Retained: X coins', '1st Place Prize: Y coins', '2nd Place Prize: Z coins', '3rd Place Prize: W coins', 'Per-winner prize (4th+): V coins'. Derive these values from the draw result data returned by `declareDraw` or `getDrawResults`.",
+      "reqIds": [
+        "REQ-62"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-admin-lottery-management-page-frontend-src-pages-admin-lotterymanagement-tsx-to-change-the-inline-validation-for-the-winner-payout-field-allow-values-from-1-to-90-not-1-to-70-update-the-helper-text-label-from-system-retains-100-this-value-as-profit-max-70-to-system-retains-100-this-value-as-profit-max-90-show-an-inline-validation-error-only-if-winnerpayoutpercent-90-not-70-update-the-calculated-summary-label-system-profit-to-reflect-the-correct-retained-percentage-based-on-the-entered-value",
+      "title": "Update the Admin Lottery Management page (`frontend/src/pages/admin/LotteryManagement.tsx`) to change the inline validation for the 'Winner Payout %' field: allow values from 1 to 90 (not 1 to 70). Update the helper text label from 'System retains (100 - this value)% as profit. Max 70%' to 'System retains (100 - this value)% as profit. Max 90%'. Show an inline validation error only if `winnerPayoutPercent > 90` (not > 70). Update the calculated summary label 'System Profit' to reflect the correct retained percentage based on the entered value.",
+      "reqIds": [
+        "REQ-65"
       ],
       "version": 1
     }
@@ -547,6 +581,74 @@
       "summary": "Update all existing admin-only backend endpoints to accept and validate the admin session token (returned by `adminLogin`) as an additional authorization check, in addition to the existing role check. If the admin session token is missing, expired, or invalid, return `#err(#unauthorized)`. This ensures that even if a non-admin user somehow obtains a session, they cannot call admin endpoints without a valid admin session token.",
       "reqIds": [
         "REQ-52"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-55",
+      "summary": "In the Motoko backend (`backend/main.mo`), initialize the stable admin credentials variable with Admin ID `admin` and the SHA-256 hash of password `admin123` at canister deploy/upgrade time. The hash must be computed using the exact same hashing function that the `adminLogin` endpoint uses at runtime for password comparison. Ensure the `initAdminCredentials` or equivalent initialization logic runs automatically in the actor's `postupgrade` system hook (or as a stable variable default initializer) so that valid credentials are present immediately after deployment without any manual configuration step. Remove any guard that prevents re-initialization if the credentials were never set correctly.",
+      "reqIds": [
+        "REQ-55"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-56",
+      "summary": "Admin configures prize distribution per lottery pool: sets total winner payout % (e.g., 90%), top 3 prize percentages individually, remaining winners share the leftover prize pool proportionally. System retains 30% as profit. All prize calculations are automatic based on these settings at draw time.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-57",
+      "summary": "Extend the LotteryPool data model in `backend/main.mo` to store prize distribution configuration fields: `winnerPayoutPercent` (Nat, e.g. 90 meaning 90% of total pool goes to winners), `firstPrizePercent` (Nat, percentage of prize fund awarded to 1st place), `secondPrizePercent` (Nat, percentage of prize fund awarded to 2nd place), `thirdPrizePercent` (Nat, percentage of prize fund awarded to 3rd place). The system profit is implicitly `100 - winnerPayoutPercent` (enforced to be 30%, so `winnerPayoutPercent` must not exceed 70% by default but allow admin override). These fields must be set at pool creation time and stored in stable state.",
+      "reqIds": [
+        "REQ-57"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-58",
+      "summary": "Update the `createLottery` (pool creation) backend endpoint to accept the four new prize distribution fields: `winnerPayoutPercent`, `firstPrizePercent`, `secondPrizePercent`, `thirdPrizePercent`. Validate that `winnerPayoutPercent` is between 1 and 70 (enforcing ≤70% to winners so that system retains ≥30% profit). Validate that `firstPrizePercent + secondPrizePercent + thirdPrizePercent` is less than 100 (the remaining percentage after subtracting top-3 shares is distributed proportionally among all other winners). Return `#err(#invalidPrizeConfig)` if validation fails.",
+      "reqIds": [
+        "REQ-58"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-59",
+      "summary": "Update the `declareDraw` function in `backend/main.mo` to use the pool's stored prize distribution configuration when calculating winner prizes. The calculation must follow this logic: (1) Compute `prizePool = totalPoolAmount * winnerPayoutPercent / 100`; (2) `systemProfit = totalPoolAmount - prizePool` (retained, not credited to any wallet); (3) Award 1st place winner `prizePool * firstPrizePercent / 100` coins; (4) Award 2nd place winner `prizePool * secondPrizePercent / 100` coins; (5) Award 3rd place winner `prizePool * thirdPrizePercent / 100` coins; (6) Compute `remainingPrizePool = prizePool - (1st + 2nd + 3rd prizes)`; (7) Distribute `remainingPrizePool` equally among all other winners (4th place onwards, up to the 70%-of-participants minimum winner count); (8) Credit each winner's wallet and create `#win` wallet transactions. If fewer than 3 tickets were sold, only award prizes up to the number of tickets sold (skip unfilled ranks).",
+      "reqIds": [
+        "REQ-59"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-60",
+      "summary": "Generate or update `backend/migration.mo` to add default values for the four new prize distribution fields (`winnerPayoutPercent`, `firstPrizePercent`, `secondPrizePercent`, `thirdPrizePercent`) on all existing LotteryPool records that do not yet have these fields. Use defaults: `winnerPayoutPercent=70`, `firstPrizePercent=40`, `secondPrizePercent=30`, `thirdPrizePercent=20` (these sum such that remaining 10% of prize pool goes to other winners).",
+      "reqIds": [
+        "REQ-60"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-63",
+      "summary": "Update the `getDrawResults` backend endpoint to include prize distribution metadata in its response: `systemProfitRetained` (Nat, coins kept by the system), `firstPrizeCredited` (Nat), `secondPrizeCredited` (Nat), `thirdPrizeCredited` (Nat), `otherWinnersPerPrize` (Nat, the equal share each 4th+ winner received). These values should be computed from the stored draw record and returned alongside the existing winner list.",
+      "reqIds": [
+        "REQ-63"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-64",
+      "summary": "Fix winner payout validation: change the max winner payout cap from 70% to 90% (system must retain at least 10%, not 30%). Update both backend validation in createLottery endpoint and frontend inline validation error message/constraint to allow up to 90% winner payout. Fix the 'Failed to create lottery' error caused by this incorrect cap.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-65",
+      "summary": "Update the `createLottery` backend endpoint in `backend/main.mo` to change the maximum allowed `winnerPayoutPercent` from 70 to 90. The validation must reject values greater than 90 (returning `#err(#invalidPrizeConfig)`) but allow any value from 1 to 90 inclusive. This ensures the system retains at least 10% profit instead of the previously enforced 30%.",
+      "reqIds": [
+        "REQ-64"
       ],
       "status": "pending"
     }

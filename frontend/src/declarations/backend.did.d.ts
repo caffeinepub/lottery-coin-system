@@ -10,6 +10,63 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface CreateLotteryData {
+  'lotteryType' : LotteryType,
+  'ticketsPerUserMax' : bigint,
+  'logo' : [] | [ExternalBlob],
+  'name' : string,
+  'firstPrizeRatio' : bigint,
+  'description' : string,
+  'drawTime' : Time,
+  'firstPrizePercent' : bigint,
+  'thirdPrizePercent' : bigint,
+  'maxTickets' : bigint,
+  'secondPrizeRatio' : bigint,
+  'secondPrizePercent' : bigint,
+  'winnerPayoutPercent' : bigint,
+  'ticketPrice' : bigint,
+  'thirdPrizeRatio' : bigint,
+  'drawInterval' : DrawInterval,
+}
+export type CreateLotteryError = { 'invalidTicketConfig' : null } |
+  { 'invalidPrizeConfig' : null } |
+  { 'invalidDrawTime' : null } |
+  { 'unauthorized' : null };
+export type DrawInterval = { 'h1' : null } |
+  { 'h3' : null } |
+  { 'h5' : null } |
+  { 'h12' : null } |
+  { 'daily' : null } |
+  { 'weekly' : null };
+export type ExternalBlob = Uint8Array;
+export interface LotteryPool {
+  'id' : string,
+  'status' : LotteryStatus,
+  'totalTicketsSold' : bigint,
+  'lotteryType' : LotteryType,
+  'ticketsPerUserMax' : bigint,
+  'logo' : [] | [ExternalBlob],
+  'name' : string,
+  'createdAt' : Time,
+  'firstPrizeRatio' : bigint,
+  'description' : string,
+  'drawTime' : Time,
+  'firstPrizePercent' : bigint,
+  'thirdPrizePercent' : bigint,
+  'maxTickets' : bigint,
+  'secondPrizeRatio' : bigint,
+  'secondPrizePercent' : bigint,
+  'totalPoolAmount' : bigint,
+  'winnerPayoutPercent' : bigint,
+  'ticketPrice' : bigint,
+  'thirdPrizeRatio' : bigint,
+  'drawInterval' : DrawInterval,
+}
+export type LotteryStatus = { 'active' : null } |
+  { 'cancelled' : null } |
+  { 'completed' : null };
+export type LotteryType = { 'daily' : null } |
+  { 'weekly' : null };
 export type Time = bigint;
 export interface UserProfile {
   'id' : string,
@@ -55,6 +112,11 @@ export interface _SERVICE {
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'createLottery' : ActorMethod<
+    [CreateLotteryData],
+    { 'ok' : LotteryPool } |
+      { 'err' : CreateLotteryError }
+  >,
   'getCallerUserProfile' : ActorMethod<
     [],
     { 'ok' : UserProfile } |

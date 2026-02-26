@@ -24,7 +24,72 @@ export const UserRole = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
+export const LotteryType = IDL.Variant({
+  'daily' : IDL.Null,
+  'weekly' : IDL.Null,
+});
+export const ExternalBlob = IDL.Vec(IDL.Nat8);
 export const Time = IDL.Int;
+export const DrawInterval = IDL.Variant({
+  'h1' : IDL.Null,
+  'h3' : IDL.Null,
+  'h5' : IDL.Null,
+  'h12' : IDL.Null,
+  'daily' : IDL.Null,
+  'weekly' : IDL.Null,
+});
+export const CreateLotteryData = IDL.Record({
+  'lotteryType' : LotteryType,
+  'ticketsPerUserMax' : IDL.Nat,
+  'logo' : IDL.Opt(ExternalBlob),
+  'name' : IDL.Text,
+  'firstPrizeRatio' : IDL.Nat,
+  'description' : IDL.Text,
+  'drawTime' : Time,
+  'firstPrizePercent' : IDL.Nat,
+  'thirdPrizePercent' : IDL.Nat,
+  'maxTickets' : IDL.Nat,
+  'secondPrizeRatio' : IDL.Nat,
+  'secondPrizePercent' : IDL.Nat,
+  'winnerPayoutPercent' : IDL.Nat,
+  'ticketPrice' : IDL.Nat,
+  'thirdPrizeRatio' : IDL.Nat,
+  'drawInterval' : DrawInterval,
+});
+export const LotteryStatus = IDL.Variant({
+  'active' : IDL.Null,
+  'cancelled' : IDL.Null,
+  'completed' : IDL.Null,
+});
+export const LotteryPool = IDL.Record({
+  'id' : IDL.Text,
+  'status' : LotteryStatus,
+  'totalTicketsSold' : IDL.Nat,
+  'lotteryType' : LotteryType,
+  'ticketsPerUserMax' : IDL.Nat,
+  'logo' : IDL.Opt(ExternalBlob),
+  'name' : IDL.Text,
+  'createdAt' : Time,
+  'firstPrizeRatio' : IDL.Nat,
+  'description' : IDL.Text,
+  'drawTime' : Time,
+  'firstPrizePercent' : IDL.Nat,
+  'thirdPrizePercent' : IDL.Nat,
+  'maxTickets' : IDL.Nat,
+  'secondPrizeRatio' : IDL.Nat,
+  'secondPrizePercent' : IDL.Nat,
+  'totalPoolAmount' : IDL.Nat,
+  'winnerPayoutPercent' : IDL.Nat,
+  'ticketPrice' : IDL.Nat,
+  'thirdPrizeRatio' : IDL.Nat,
+  'drawInterval' : DrawInterval,
+});
+export const CreateLotteryError = IDL.Variant({
+  'invalidTicketConfig' : IDL.Null,
+  'invalidPrizeConfig' : IDL.Null,
+  'invalidDrawTime' : IDL.Null,
+  'unauthorized' : IDL.Null,
+});
 export const UserProfile = IDL.Record({
   'id' : IDL.Text,
   'referralCode' : IDL.Text,
@@ -67,6 +132,11 @@ export const idlService = IDL.Service({
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'createLottery' : IDL.Func(
+      [CreateLotteryData],
+      [IDL.Variant({ 'ok' : LotteryPool, 'err' : CreateLotteryError })],
+      [],
+    ),
   'getCallerUserProfile' : IDL.Func(
       [],
       [
@@ -109,7 +179,69 @@ export const idlFactory = ({ IDL }) => {
     'user' : IDL.Null,
     'guest' : IDL.Null,
   });
+  const LotteryType = IDL.Variant({ 'daily' : IDL.Null, 'weekly' : IDL.Null });
+  const ExternalBlob = IDL.Vec(IDL.Nat8);
   const Time = IDL.Int;
+  const DrawInterval = IDL.Variant({
+    'h1' : IDL.Null,
+    'h3' : IDL.Null,
+    'h5' : IDL.Null,
+    'h12' : IDL.Null,
+    'daily' : IDL.Null,
+    'weekly' : IDL.Null,
+  });
+  const CreateLotteryData = IDL.Record({
+    'lotteryType' : LotteryType,
+    'ticketsPerUserMax' : IDL.Nat,
+    'logo' : IDL.Opt(ExternalBlob),
+    'name' : IDL.Text,
+    'firstPrizeRatio' : IDL.Nat,
+    'description' : IDL.Text,
+    'drawTime' : Time,
+    'firstPrizePercent' : IDL.Nat,
+    'thirdPrizePercent' : IDL.Nat,
+    'maxTickets' : IDL.Nat,
+    'secondPrizeRatio' : IDL.Nat,
+    'secondPrizePercent' : IDL.Nat,
+    'winnerPayoutPercent' : IDL.Nat,
+    'ticketPrice' : IDL.Nat,
+    'thirdPrizeRatio' : IDL.Nat,
+    'drawInterval' : DrawInterval,
+  });
+  const LotteryStatus = IDL.Variant({
+    'active' : IDL.Null,
+    'cancelled' : IDL.Null,
+    'completed' : IDL.Null,
+  });
+  const LotteryPool = IDL.Record({
+    'id' : IDL.Text,
+    'status' : LotteryStatus,
+    'totalTicketsSold' : IDL.Nat,
+    'lotteryType' : LotteryType,
+    'ticketsPerUserMax' : IDL.Nat,
+    'logo' : IDL.Opt(ExternalBlob),
+    'name' : IDL.Text,
+    'createdAt' : Time,
+    'firstPrizeRatio' : IDL.Nat,
+    'description' : IDL.Text,
+    'drawTime' : Time,
+    'firstPrizePercent' : IDL.Nat,
+    'thirdPrizePercent' : IDL.Nat,
+    'maxTickets' : IDL.Nat,
+    'secondPrizeRatio' : IDL.Nat,
+    'secondPrizePercent' : IDL.Nat,
+    'totalPoolAmount' : IDL.Nat,
+    'winnerPayoutPercent' : IDL.Nat,
+    'ticketPrice' : IDL.Nat,
+    'thirdPrizeRatio' : IDL.Nat,
+    'drawInterval' : DrawInterval,
+  });
+  const CreateLotteryError = IDL.Variant({
+    'invalidTicketConfig' : IDL.Null,
+    'invalidPrizeConfig' : IDL.Null,
+    'invalidDrawTime' : IDL.Null,
+    'unauthorized' : IDL.Null,
+  });
   const UserProfile = IDL.Record({
     'id' : IDL.Text,
     'referralCode' : IDL.Text,
@@ -152,6 +284,11 @@ export const idlFactory = ({ IDL }) => {
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'createLottery' : IDL.Func(
+        [CreateLotteryData],
+        [IDL.Variant({ 'ok' : LotteryPool, 'err' : CreateLotteryError })],
+        [],
+      ),
     'getCallerUserProfile' : IDL.Func(
         [],
         [
